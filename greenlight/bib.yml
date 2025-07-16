@@ -1,0 +1,815 @@
+flippo2024proof:
+    type: Article
+    author:
+      - Flippo, Maarten
+      - Sidorov, Konstantin
+      - Marijnissen, Imko
+      - Smits, Jeff
+      - Demirović, Emir
+    title: A Multi-Stage Proof Logging Framework to Certify the Correctness of CP Solvers
+    date: 2024-08-29
+    page-range: 11:1-11:20
+    serial-number:
+        doi: "10.4230/LIPIcs.CP.2024.11"
+        
+    parent:
+        - type: Proceedings
+          title: 30th International Conference on Principles and Practice of Constraint Programming (CP 2024)
+          volume: 307
+          editor: ["Shaw, Paul"]
+          # series =	{Leibniz International Proceedings in Informatics (LIPIcs)},
+          publisher: Schloss Dagstuhl - Leibniz-Zentrum für Informatik
+            # name: Schloss Dagstuhl - Leibniz-Zentrum für Informatik
+            # location: Dagstuhl, Germany
+            
+gange1certifying:
+  type: article
+  title: Certifying optimality in constraint programming (unpublished)
+  date: 2017
+  author:
+  - Gange, G
+  - Chu, Geoffrey
+  - Stuckey, P. J.
+  url: https://people.eng.unimelb.edu.au/pstuckey/papers/certified-cp.pdf
+    
+gocht2022certifying:
+  type: article
+  title: 'Certifying correctness for combinatorial algorithms: by using pseudo-Boolean reasoning'
+  author: Gocht, Stephan
+  date: 2022
+  parent:
+    type: periodical
+
+apt2003principles:
+  type: book
+  title: Principles of Constraint Programming
+  author: Apt, Krzysztof
+  date: 2003
+  publisher: Cambridge University Press
+
+baptiste2001constraint:
+  type: book
+  title: 'Constraint-based scheduling: applying constraint programming to scheduling problems'
+  author:
+  - Baptiste, Philippe
+  - Le Pape, Claude
+  - Nuijten, Wim
+  date: 2001
+  publisher: Springer Science & Business Media
+  volume: 39
+
+stallman1977forward:
+  type: article
+  title: Forward reasoning and dependency-directed backtracking in a system for computer-aided circuit analysis
+  author:
+  - Stallman, Richard M
+  - Sussman, Gerald J
+  date: 1977
+  page-range: 135-196
+  parent:
+    type: periodical
+    title: Artificial intelligence
+    publisher: Elsevier
+    issue: 2
+    volume: 9
+
+wallace1996practical:
+  type: article
+  title: Practical applications of constraint programming
+  author: Wallace, Mark
+  date: 1996
+  page-range: 139-168
+  parent:
+    type: periodical
+    title: Constraints
+    publisher: Springer
+    volume: 1
+
+rossi2006handbook:
+  type: book
+  title: Handbook of Constraint Programming
+  author:
+  - Rossi, F.
+  - name: Beek
+    given-name: P.
+    prefix: van
+  - Walsh, T.
+  date: 2006
+  publisher: Elsevier Science
+  serial-number:
+    isbn: '9780080463803'
+  parent:
+    type: book
+    title: Foundations of Artificial Intelligence
+
+schutt2011improving:
+  type: thesis
+  title: Improving scheduling by learning
+  author: Schutt, Andreas
+  date: 2011
+  publisher: University of Melbourne, Department of Computer Science, Software Engineering
+
+biere2021handbook:
+  type: book
+  title: 'Handbook of Satisfiability: Second Edition'
+  author:
+  - Biere, A.
+  - Heule, M.
+  - name: Maaren
+    given-name: H.
+    prefix: van
+  date: 2021
+  publisher: IOS Press
+  # url: https://books.google.nl/books?id=dUAvEAAAQBAJ
+  serial-number:
+    isbn: '9781643681610'
+  parent:
+    type: book
+    title: Frontiers in Artificial Intelligence and Applications
+
+nethercote2007minizinc:
+  type: article
+  title: 'MiniZinc: Towards a standard CP modelling language'
+  author:
+  - Nethercote, Nicholas
+  - Stuckey, Peter J
+  - Becket, Ralph
+  - Brand, Sebastian
+  - Duck, Gregory J
+  - Tack, Guido
+  date: 2007
+  page-range: 529-543
+  serial-number:
+    doi: "10.1007/978-3-540-74970-7_38"
+  parent:
+    type: proceedings
+    title: International Conference on Principles and Practice of Constraint Programming
+    organization: Springer
+
+minizinc_cumulative_2024:
+  type: web
+  title: '{Cumulative - MiniZinc Library Reference v2.8.7}'
+  author: MiniZinc Team
+  url: 
+    value: https://docs.minizinc.dev/en/2.8.7/lib-globals-scheduling.html#cumulative
+    date: 2024-11-28
+  note: 'Accessed: 2024-11-28'
+
+joshi2015totalizer:
+  type: article
+  title: Generalized Totalizer Encoding for Pseudo-Boolean Constraints
+  author:
+  - Joshi, Saurabh
+  - Martins, Ruben
+  - Manquinho, Vasco
+  date: 2015
+  page-range: 200-209
+  serial-number:
+    doi: 10.1007/978-3-319-23219-5_15
+  parent:
+    type: proceedings
+    editor: Pesant, Gilles
+    title: Principles and Practice of Constraint Programming
+    publisher:
+      name: Springer International Publishing
+      location: Cham
+
+skotaam2022creusat:
+  type: thesis
+  title: "CreuSAT: Using Rust and Creusot to create the world's fastest deductively verified SAT solver"
+  author: Skotåm, Sarek Høverstad
+  date: 2022
+
+denis2023creusot:
+  type: thesis
+  title: "Deductive Verification of Rust Programs"
+  author: Denis, Xavier
+  date: 2023-12
+  organization: Université Paris-Saclay
+  url: https://theses.hal.science/tel-04517581
+
+fleury2018verified:
+  type: article
+  title: A verified SAT solver with watched literals using imperative HOL
+  author:
+  - Fleury, Mathias
+  - Blanchette, Jasmin Christian
+  - Lammich, Peter
+  date: 2018
+  page-range: 158-171
+  serial-number:
+    doi: 10.1145/3167080
+  parent:
+    type: proceedings
+    title: Proceedings of the 7th ACM SIGPLAN International Conference on Certified Programs and Proofs
+
+mackworth1977consistency:
+  type: article
+  title: Consistency in networks of relations
+  author: Mackworth, Alan K
+  date: 1977
+  page-range: 99-118
+  parent:
+    type: periodical
+    title: Artificial intelligence
+    publisher: Elsevier
+    issue: 1
+    volume: 8
+
+ohrimenko2009lcg:
+  type: article
+  title: Propagation via lazy clause generation
+  author:
+  - Ohrimenko, Olga
+  - Stuckey, Peter J.
+  - Codish, Michael
+  date: 2009-01
+  page-range: 357-391
+  url: http://dx.doi.org/10.1007/s10601-008-9064-x
+  serial-number:
+    doi: 10.1007/s10601-008-9064-x
+    issn: 1572-9354
+  parent:
+    type: periodical
+    title: Constraints
+    publisher: Springer Science, Business Media LLC
+    issue: 3
+    volume: 14
+
+bobot2011why3:
+  type: article
+  title: 'Why3: Shepherd your herd of provers'
+  author:
+  - Bobot, François
+  - Filliâtre, Jean-Christophe
+  - Marché, Claude
+  - Paskevich, Andrei
+  date: 2011
+  page-range: 53-64
+  parent:
+    type: proceedings
+    title: 'Boogie 2011: First International Workshop on Intermediate Verification Languages'
+
+ho2022aeneas:
+  type: article
+  title: 'Aeneas: Rust verification by functional translation'
+  author:
+  - Ho, Son
+  - Protzenko, Jonathan
+  date: 2022-08
+  page-range: 711-741
+  url: http://dx.doi.org/10.1145/3547647
+  serial-number:
+    doi: 10.1145/3547647
+    issn: 2475-1421
+  parent:
+    type: periodical
+    title: Proceedings of the ACM on Programming Languages
+    publisher: Association for Computing Machinery (ACM)
+    issue: ICFP
+    volume: 6
+
+astrauskas2019prusti:
+  type: article
+  title: Leveraging {R}ust Types for Modular Specification and Verification
+  author:
+  - Astrauskas, V.
+  - Müller, P.
+  - Poli, F.
+  - Summers, A. J.
+  date: 2019
+  page-range: 1-30
+  url: https://www.youtube.com/watch?v=lfc08mntlB0
+  serial-number:
+    doi: 10.1145/3360573
+  parent:
+    type: proceedings
+    title: Object-Oriented Programming Systems, Languages, and Applications (OOPSLA)
+    publisher: ACM
+    issue: OOPSLA
+    volume: 3
+
+muller2016viper:
+  type: article
+  title: 'Viper: A verification infrastructure for permission-based reasoning'
+  author:
+  - Müller, Peter
+  - Schwerhoff, Malte
+  - Summers, Alexander J
+  date: 2016
+  page-range: 41-62
+  serial-number:
+    doi: 10.1007/978-3-662-49122-5_2
+  parent:
+    type: proceedings
+    title: 'Verification, Model Checking, and Abstract Interpretation: 17th International Conference, VMCAI 2016, St. Petersburg, FL, USA, January 17-19, 2016. Proceedings 17'
+    organization: Springer
+
+lattuada2023verus:
+  type: article
+  title: 'Verus: Verifying rust programs using linear ghost types'
+  author:
+  - Lattuada, Andrea
+  - Hance, Travis
+  - Cho, Chanhee
+  - Brun, Matthias
+  - Subasinghe, Isitha
+  - Zhou, Yi
+  - Howell, Jon
+  - Parno, Bryan
+  - Hawblitzel, Chris
+  serial-number:
+    doi: 10.1145/3586037
+  date: 2023
+  page-range: 286-315
+  parent:
+    type: periodical
+    title: Proceedings of the ACM on Programming Languages
+    publisher: ACM New York, NY, USA
+    issue: OOPSLA1
+    volume: 7
+
+matsushita2020rusthorn:
+  type: article
+  title: 'RustHorn: CHC-based Verification for Rust Programs'
+  author:
+  - Matsushita, Yusuke
+  - Tsukada, Takeshi
+  - Kobayashi, Naoki
+  date: 2020
+  editor: Müller, Peter
+  page-range: 484-514
+  url: https://doi.org/10.1007/978-3-030-44914-8_18
+  serial-number:
+    doi: 10.1007/978-3-030-44914-8_18
+    isbn: 978-3-030-44913-1
+  parent:
+    type: proceedings
+    title: Programming Languages and Systems - 29th European Symposium on Programming, ESOP
+    publisher: Springer
+    volume: 12075
+    parent:
+      type: proceedings
+      title: Lecture Notes in Computer Science
+
+sidorov2025checker:
+    type: Article
+    title: 'WIP: Certified CP proof checker'
+    author:
+      - Sidorov, Konstantin
+      - Flippo, Maarten
+      - Demirović, Emir
+
+peled2019formal:
+  type: chapter
+  title: Formal Methods
+  author: Peled, Doron A.
+  date: 2019
+  page-range: 193-222
+  parent:
+    type: book
+    title: Handbook of Software Engineering
+    publisher: Springer
+
+feydy2009rengineered:
+  type: article
+  title: Lazy Clause Generation Reengineered
+  author:
+  - Feydy, Thibaut
+  - Stuckey, Peter J.
+  date: 2009-09
+  page-range: 352-366
+  serial-number:
+    doi: 10.1007/978-3-642-04244-7_29
+  parent:
+    type: proceedings
+    title: International Conference on Principles and Practice of Constraint Programming
+    publisher:
+      name: Springer Berlin Heidelberg
+      location: Berlin, Heidelberg
+
+harvey2003improving:
+  type: article
+  title: Improving Linear Constraint Propagation by Changing Constraint Representation
+  author:
+  - Harvey, Warwick
+  - Stuckey, Peter J.
+  date: 2003
+  page-range: 173-207
+  serial-number:
+    doi: 10.1023/A:1022323717928
+  parent:
+    type: periodical
+    title: Constraints
+    publisher: Springer
+    issue: 2
+    volume: 8
+
+apt2007analysis:
+  type: article
+  title: An Analysis of Arithmetic Constraints on Integer Intervals
+  author:
+  - Apt, Krzysztof R.
+  - Zoeteweij, Peter
+  date: 2007
+  page-range: 429-468
+  serial-number:
+    doi: 10.1007/s10601-007-9017-9
+  parent:
+    type: periodical
+    title: Constraints
+    publisher: Springer
+    issue: 4
+    volume: 12
+
+carlier2012certified:
+  type: article
+  title: A Certified Constraint Solver over Finite Domains
+  author:
+  - Carlier, Matthieu
+  - Dubois, Catherine
+  - Gotlieb, Arnaud
+  date: 2012
+  page-range: 116-131
+  serial-number:
+    doi: 10.1007/978-3-642-32759-9_12
+  parent:
+    type: proceedings
+    title: 'FM 2012: Formal Methods'
+    publisher: Springer Berlin Heidelberg
+    volume: 7436
+    parent:
+      type: proceedings
+      title: Lecture Notes in Computer Science
+
+vilim2011ttef:
+  type: article
+  title: Timetable edge finding filtering algorithm for discrete cumulative resources
+  author: Vilím, Petr
+  date: 2011
+  page-range: 230-245
+  serial-number:
+    doi: 10.1007/978-3-642-21311-3_22
+  parent:
+    type: proceedings
+    title: Integration of AI and OR Techniques in Constraint Programming for Combinatorial Optimization Problems
+    publisher: Springer
+
+downing2012explainalldiff:
+  type: article
+  title: Explaining alldifferent
+  author:
+  - Downing, Nicholas
+  - Feydy, Thibaut
+  - Stuckey, Peter J
+  date: 2012
+  page-range: 115-124
+  parent:
+    type: proceedings
+    title: Proceedings of the Thirty-fifth Australasian Computer Science Conference-Volume 122
+
+schulte2009weakmonotonprop:
+  type: article
+  title: Weakly Monotonic Propagators
+  author:
+  - Schulte, Christian
+  - Tack, Guido
+  date: 2009
+  editor: Gent, Ian P.
+  page-range: 723-730
+  serial-number:
+    doi: 10.1007/978-3-642-04244-7_56
+  parent:
+    type: proceedings
+    title: Principles and Practice of Constraint Programming – CP 2009
+    publisher: Springer
+    volume: 5732
+    parent:
+      type: proceedings
+      title: Lecture Notes in Computer Science
+
+peschke1990endstheory:
+  type: article
+  title: The Theory of Ends
+  author: Peschke, Georg
+  date: 1990
+  url: https://ncatlab.org/nlab/files/Peschke-Ends.pdf
+  parent:
+    type: periodical
+    title: Nieuw Archief voor Wiskunde
+    issue: 1
+    volume: 8
+
+caballero2013typeext:
+  type: article
+  title: Finite Type Extensions in Constraint Programming
+  author:
+  - Caballero, Rafael
+  - Stuckey, Peter J.
+  - Tenorio-Fornés, Antonio
+  date: 2013
+  page-range: 217-227
+  url: https://doi.org/10.1145/2505879.2505905
+  serial-number:
+    doi: 10.1145/2505879.2505905
+  parent:
+    type: proceedings
+    title: Proceedings of the 15th Symposium on Principles and Practice of Declarative Programming (PPDP 2013)
+    publisher:
+      name: ACM
+      location: Madrid, Spain
+
+chuffed2025:
+  type: repository
+  title: 'Chuffed: A Lazy Clause Generation Constraint Programming Solver'
+  author:
+  - Chu, Geoffrey
+  - Stuckey, Peter J.
+  - Schutt, Andreas
+  - Ehlers, Thorsten
+  - Gange, Graeme
+  - Francis, Kathryn
+  url: https://github.com/chuffed/chuffed
+  organization: Data61 – CSIRO, The University of Melbourne
+
+gecode2025:
+  type: misc
+  title: 'Gecode: Generic Constraint Development Environment'
+  author:
+  - Christian Schulte
+  - Guido Tack
+  - Mikael Z. Lagerkvist
+  - Gecode Team
+  url: https://www.gecode.org
+
+leclement2013sparseset:
+  type: article
+  title: 'Sparse-Sets for Domain Implementation'
+  author:
+  - Le Clément de Saint-Marcq, Vianney
+  - Schaus, Pierre
+  - Solnon, Christine
+  - Lecoutre, Christophe
+  date: 2013-09
+  page-range: 1-10
+  url: https://hal.science/hal-01339250
+  parent:
+    type: proceedings
+    title: 'CP workshop on Techniques foR Implementing Constraint programming Systems (TRICS)'
+
+dubois2025sparsesetverif:
+  type: article
+  title: Deductive Verification of Sparse Sets in Why3
+  author: Dubois, Catherine
+  date: 2025
+  editor:
+  - Protzenko, Jonathan
+  - Raad, Azalea
+  page-range: 28-46
+  serial-number:
+    doi: 10.1007/978-3-031-86695-1_3
+    isbn: 978-3-031-86695-1
+  parent:
+    type: proceedings
+    title: Verified Software. Theories, Tools and Experiments
+    publisher:
+      name: Springer Nature Switzerland
+      location: Cham
+
+ledein2020intervallist:
+  type: article
+  title: 'FaCiLe en Coq : vérification formelle des listes d''intervalles'
+  author:
+  - Ledein, Amélie
+  - Dubois, Catherine
+  date: 2020-01
+  url: https://hal.science/hal-04344249
+  parent:
+    type: proceedings
+    title: 'JFLA 2020 : Journées Francophones des Langages Applicatifs'
+    publisher:
+      location: Gruisan, France
+
+michel2021minicp:
+  type: article
+  title: 'MiniCP: a lightweight solver for constraint programming'
+  author:
+  - Michel, L.
+  - Schaus, P.
+  - Van Hentenryck, P.
+  date: 2021-03-01
+  page-range: 133-184
+  url: https://doi.org/10.1007/s12532-020-00190-7
+  serial-number:
+    doi: 10.1007/s12532-020-00190-7
+    issn: 1867-2957
+  parent:
+    type: periodical
+    title: Mathematical Programming Computation
+    issue: 1
+    volume: 13
+
+pohitos2010gaptrees:
+  type: article
+  title: Flexible Management of Large-Scale Integer Domains in CSPs
+  author:
+  - Pothitos, Nikolaos
+  - Stamatopoulos, Panagiotis
+  date: 2010
+  editor:
+  - Konstantopoulos, Stasinos
+  - Perantonis, Stavros
+  - Karkaletsis, Vangelis
+  - Spyropoulos, Constantine D.
+  - Vouros, George
+  page-range: 405-410
+  serial-number:
+    isbn: 978-3-642-12842-4
+    doi: 10.1007/978-3-642-12842-4_51
+  parent:
+    type: proceedings
+    title: 'Artificial Intelligence: Theories, Models and Applications'
+    publisher:
+      name: Springer Berlin Heidelberg
+      location: Berlin, Heidelberg
+
+
+vanhoeve2001alldifferent:
+  type: article
+  title: 'The alldifferent Constraint: A Survey'
+  author:
+    name: Hoeve
+    given-name: Willem Jan
+    prefix: van
+  date: 2001
+  serial-number:
+    isbn: 978-3-642-12842-4
+    doi: 10.48550/arXiv.cs/0105015
+  parent:
+    type: proceedings
+    title: Proceedings of the 6th ERCIM Working Group on Constraints Worksho
+
+  
+hall1935representatives:
+  type: article
+  title: On Representatives of Subsets
+  author: Hall, P.
+  date: 1935
+  page-range: 26-30
+  url: https://doi.org/10.1112/jlms/s1-10.37.26
+  serial-number:
+    doi: 10.1112/jlms/s1-10.37.26
+  parent:
+    type: periodical
+    title: Journal of the London Mathematical Society
+    issue: 1
+
+gelder2008rup:
+  type: article
+  title: Verifying RUP Proofs of Propositional Unsatisfiability
+  author: Gelder, Allen Van
+  date: 2008
+  url: https://isaim2008.unl.edu/PAPERS/TechnicalProgram/ISAIM2008_0008_60a1f9b2fd607a61ec9e0feac3f438f8.pdf
+  parent:
+    type: proceedings
+    title: International Symposium on Artificial Intelligence and Mathematics, {ISAIM} 2008, Fort Lauderdale, Florida, USA, January 2-4, 2008 
+
+goldberg2003unsatcnf:
+  type: article
+  title: Verification of Proofs of Unsatisfiability for {CNF} Formulas
+  author:
+  - Goldberg, Evguenii I.
+  - Novikov, Yakov
+  date: 2003-03
+  page-range: 886-891
+  url: https://doi.org/10.1109/DATE.2003.1253718
+  serial-number:
+    doi: 10.1109/DATE.2003.1253718
+  parent:
+    type: proceedings
+    title: Proceedings of the Design, Automation and Test in Europe Conference and Exhibition (DATE 2003)
+    publisher:
+      name: '{IEEE} Computer Society'
+      location: Munich, Germany
+
+regin1994alldiff:
+  type: article
+  title: A filtering algorithm for constraints of difference in CSPs
+  author: Régin, Jean-Charles
+  date: 1994
+  page-range: 362-367
+  url: https://aaai.org/papers/00362-aaai94-055-a-filtering-algorithm-for-constraints-of-difference-in-csps/
+  parent:
+    type: proceedings
+    title: Proceedings of the Twelfth National Conference on Artificial Intelligence (Vol. 1)
+    publisher:
+      name: American Association for Artificial Intelligence
+      location: Seattle, Washington, USA
+    parent:
+      type: proceedings
+      title: AAAI '94
+
+hopcroft1973maxmath:
+  type: article
+  title: An $n^(5/2)$ Algorithm for Maximum Matchings in Bipartite Graphs
+  author:
+  - Hopcroft, John E.
+  - Karp, Richard M.
+  date: 1973
+  page-range: 225-231
+  url: https://doi.org/10.1137/0202019
+  serial-number:
+    doi: 10.1137/0202019
+  parent:
+    type: periodical
+    title: SIAM Journal on Computing
+    issue: 4
+    volume: 2
+
+baptiste1999satcumul:
+  type: article
+  title: Satisfiability tests and time‐bound adjustments for cumulative scheduling problems
+  author:
+  - Baptiste, Ph.
+  - Le Pape, C.
+  - Nuijten, W.
+  date: 1999-01-01
+  page-range: 305-333
+  url: https://doi.org/10.1023/A:1018995000688
+  serial-number:
+    doi: 10.1023/A:1018995000688
+    issn: 1572-9338
+  parent:
+    type: periodical
+    title: Annals of Operations Research
+    issue: 0
+    volume: 92
+
+letort2012scalesweep:
+  type: article
+  title: A Scalable Sweep Algorithm for the cumulative Constraint
+  author:
+  - Letort, Arnaud
+  - Beldiceanu, Nicolas
+  - Carlsson, Mats
+  date: 2012
+  editor: Milano, Michela
+  page-range: 439-454
+  serial-number:
+    doi: 10.1007/978-3-642-33558-7_33
+    isbn: 978-3-642-33558-7
+  parent:
+    type: proceedings
+    title: Principles and Practice of Constraint Programming
+    publisher:
+      name: Springer Berlin Heidelberg
+      location: Berlin, Heidelberg
+
+aggoun1993cumulative:
+  type: article
+  title: Extending chip in order to solve complex scheduling and placement problems
+  author:
+  - Aggoun, Abderrahmane
+  - Beldiceanu, Nicolas
+  date: 1993
+  page-range: 57-73
+  serial-number:
+    doi: https://doi.org/10.1016/0895-7177(93)90068-A
+    issn: 0895-7177
+  parent:
+    type: periodical
+    title: Mathematical and Computer Modelling
+    issue: 7
+    volume: 17
+
+ouellet2013cumulative:
+  type: article
+  title: Time-Table Extended-Edge-Finding for the Cumulative Constraint
+  author:
+  - Ouellet, Pierre
+  - Quimper, Claude-Guy
+  date: 2013
+  editor: Schulte, Christian
+  page-range: 562-577
+  serial-number:
+    doi: 10.1007/978-3-642-40627-0_42
+    isbn: 978-3-642-40627-0
+  parent:
+    type: proceedings
+    title: Principles and Practice of Constraint Programming
+    publisher:
+      name: Springer Berlin Heidelberg
+      location: Berlin, Heidelberg
+
+erschler1990energy:
+  type: article
+  title: Energy-Based Approach for Task Scheduling under Time and Resources Constraints
+  author:
+  - Erschler, J.
+  - Lopez, P.
+  date: 1990
+  url: https://cse.unl.edu/~choueiry/F14-421-821/Documents/Erschler-Lopez-1991.pdf
+  page-range: 115-121
+  parent:
+    type: proceedings
+    title: Proceedings of the 2nd International Workshop on Project Management and Scheduling
