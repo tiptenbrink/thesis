@@ -13,6 +13,8 @@ contexts:
   main:
     - include: comments
     - include: function-definition
+    - include: inductive-definition
+    - include: record-definition
     - include: keywords
     - include: function-calls
     - include: operators
@@ -23,7 +25,7 @@ contexts:
       scope: comment.line.tiplang
 
   function-definition:
-    - match: '\b(Definition)\s+({{identifier}})\s*\('
+    - match: '\b(Definition|Recursive)\s+({{identifier}})\s*\('
       captures:
         1: keyword.declaration.function.tiplang
         2: entity.name.function.tiplang
@@ -42,6 +44,52 @@ contexts:
         3: punctuation.section.function.begin.tiplang
       pop: true
 
+  inductive-definition:
+    - match: '\b(Inductive)\s+({{identifier}})\s*:'
+      captures:
+        1: keyword.declaration.function.tiplang
+        2: entity.name.function.tiplang
+      push: inductive-cases
+
+  inductive-cases:
+    - match: '\b(case)\s+({{identifier}})'
+      captures:
+        1: keyword.control.case.tiplang
+        2: entity.name.function.tiplang
+      push: case-parameters
+    - match: '(?=^\S)'
+      pop: true
+
+  case-parameters:
+    - match: '\('
+      scope: punctuation.section.arguments.begin.tiplang
+      push:
+        - match: '({{identifier}})\s*(:)\s*({{type_name}})'
+          captures:
+            1: meta.annotation.tiplang
+            2: punctuation.separator.type.tiplang
+            3: support.macro
+        - match: '\)'
+          scope: punctuation.section.arguments.end.tiplang
+          pop: true
+    - match: '(?=\n)'
+      pop: true
+
+  record-definition:
+    - match: '\b(Record)\s+({{identifier}})\s*:'
+      captures:
+        1: keyword.declaration.function.tiplang
+        2: entity.name.function.tiplang
+      push: record-fields
+
+  record-fields:
+    - match: '({{identifier}})\s*(:)\s*({{type_name}})'
+      captures:
+        1: meta.annotation.tiplang
+        2: punctuation.separator.type.tiplang
+        3: support.macro
+    - match: '(?=^\S)'
+      pop: true
 
   keywords:
     - match: '\b(match)\b'

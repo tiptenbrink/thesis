@@ -75,11 +75,14 @@
   )
 
   // Configure headings.
-  set heading(numbering: "1.")
+  set heading(numbering: (..nums) => {
+    nums.pos().map(str).join(".")
+  })
   show heading: it => {
     // Create the heading numbering.
     let number = if it.numbering != none {
       counter(heading).display(it.numbering)
+      [.]
       h(7pt, weak: true)
     }
 

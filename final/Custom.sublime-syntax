@@ -536,7 +536,7 @@ contexts:
       pop: true
 
   classes:
-    - match: '^\s*(Record)\b'
+    - match: '^\s*(Record|Inductive)\b'
       captures:
         1: storage.type.class.python keyword.declaration.class.python
       push:

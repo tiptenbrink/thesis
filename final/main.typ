@@ -1,12 +1,10 @@
 #import "ams.typ": ams-article, ams-biblio
-#import "@preview/ctheorems:1.1.3": *
-#show: thmrules
-#import "@preview/algo:0.3.4": algo, i, d, comment, code, _algo-default-keywords
-#import "@preview/curryst:0.3.0": rule, proof-tree
+// #import "@preview/algo:0.3.4": algo, i, d, comment, code, _algo-default-keywords
+// #let algo_keywords = _algo-default-keywords + ("match", "with", "case", "lambda", "def", "continue", "enum")
+// #import "@preview/curryst:0.3.0": rule, proof-tree
 
 #import "@preview/great-theorems:0.1.2": *
 #import "@preview/rich-counters:0.2.2": *
-
 
 
 
@@ -87,12 +85,12 @@
 
 
 #let definition = mymathblock("Definition", bluel)
-
-// #let definition = thmbox("definition", "Definition", base_level: 1, inset: (x: 1.2em, y: 0.8em), radius: 0em, fill: bluel)
 #let example = mymathblock("Example", ochrl)
 #let theorem = mymathblock("Theorem", pinkl)
 #let lemma = mymathblock("Lemma", pinkl)
 #let procedure = mymathblock("Procedure", greyl)
+
+#let codeblocksize = 9.25pt
 
 #let mycodeblock(type) = {
   mathblock(
@@ -104,7 +102,8 @@
     prefix: (count) => {
       [*#type #count*]
     },
-    titlix: (title) => [(#title):]
+    titlix: (title) => [(#title):],
+    bodyfmt: text.with(size: codeblocksize)
   )
 }
 
@@ -118,24 +117,17 @@
     prefix: (count) => {
       [*#type #count*:]
     },
-    titlix: (title) => [\ #title]
+    titlix: (title) => [\ #title],
+    bodyfmt: text.with(size: codeblocksize)
   )
 }
 
 #let pseudocode = mycodeblock("Pseudocode")
-// #let pseudocode = thmbox("pseudocode", "Pseudocode", separator: [#linebreak()], namefmt: name => {
-//   //set text(font: "New Computer Modern Mono", size: 10pt) 
-//   //[(*#name*)]
-//   [(#name)]
-// }, base_level: 1, inset: (x: 1em, y: 0.8em), radius: 0em, fill: greyl)
 
 #let snippet = mycodeblock("Snippet")
 
 #let notation = mymathblock("Notation", greyl)
 
-// #let funclink(name: "name_me") = {
-//   [#figure(kind: "function", supplement: name) #label("fun" + name)]
-// }
 
 #let funlink(label_name, name) = {
   let pseudo_nmbr = context {
@@ -144,85 +136,46 @@
     let label_ctr = label_el.counter.display()
     let head_ctr_p1 = (head_ctr.first(), head_ctr.at(1) + 1)
     // link(label_name, )
-    [(Pseudocode #numbering("1.1", ..head_ctr_p1))]
+    [(#label_el.supplement #numbering("1.1", ..head_ctr_p1))]
   }
   [#metadata(("funlink", jmono(name), pseudo_nmbr))#label("fun:" + name)]
-  // [
-  //   // #figure(kind: "funlink", supplement: cnt, [#sym.zws]) #label("fun:" + name)
-  // ]
 }
 
 #let fundesc = mycodedesc("Function Description")
-
-// #let funcdesc(capt, content, name: "name_me", label_nm: none) = {
-//   //#set par(justify: false)
-//   show figure: set align(left)
-
-//   show figure.caption: cpt => {
-//     strong({
-//       [Function Description ]
-//       context counter(heading).get().first()
-//       [.]
-//       context cpt.counter.display(cpt.numbering)
-//     })
-//     [\ ]
-//     cpt.body
-//   }
-//   show figure: fg => {
-//     block(fill: greyl, inset: (x: 1em, y: 0.8em), {
-//         fg.caption
-//         [#fg.body]
-//       }
-//     )
-//   }
-
-//   [
-//     #figure(
-//       placement: none, 
-//       kind: "function",
-//       supplement: name,
-//       caption: capt,
-//       content
-//     ) #{ if label_nm != none { label(label_nm) } }
-//   ]
-// }
 
 #show ref: it => {
   let el = it.element
   if el == none {
     it
-  } else if el.func() == figure {
-    if el.kind == "function" {
-      let sec_cnt = context counter(heading).at(el.location()).first()
-      jmono[#el.supplement]
-      [ (Function Description ]
-      sec_cnt
-      [.]
-      link(el.location(), [#el.counter.get().first()])
-      [)]
-    } else {
-      it
-    }
-  } else if el.func() == metadata {
-    if type(el.value) == array and el.value.first() == "funlink" {
-      if it.supplement == [l] {
+  } else if el.func() == metadata and type(el.value) == array and el.value.first() == "funlink" {
+    if it.supplement == [l] {
         link(it.target, [#el.value.at(1) #el.value.at(2)])
       } else {
         link(it.target, [#el.value.at(1)])
       }
-    }
   } else {
     it
   }
 }
 
-#outline(depth: 3)
+#let appendix_number(numbers) = {
+  numbering("A.", ..numbers.slice(1))
+}
+
+#show outline.entry: it => {
+  // The numbering is always without the trailing period so that references work
+  // We have to add it here manually just like in the show rule for headings
+  if it.element.numbering != none {
+    link(it.element.location(), it.indented([#it.prefix().], it.inner()))
+  } else {
+    // If there is no numbering we don't want to indent it, as then it looks like it's at a lower level
+    it
+  }
+}
+
+#outline(depth: 2)
 
 #import "@preview/showybox:2.0.3": showybox
-
-#[
-  #set heading(numbering: none)
-]
 
 #let numbered(c) = {
   [
@@ -258,6 +211,9 @@
     caption: caption
   )
 }
+
+#todo[remove!]
+#show link: text.with(fill: blue)
 
 // ```
 // Planning:
@@ -438,10 +394,10 @@ When domains are finite, practical CSP solvers will eventually enumerate all sol
 In the next two sections, we discuss two different constraints, alldifferent and cumulative. These were selected based on a combination of popularity and intuition about how challenging they would be to verify. During the discussion of these constraints, we also introduce the intuition necessary for verifying the reasoning performed during propagation. 
 
 
-#let algo_keywords = _algo-default-keywords + ("match", "with", "case", "lambda", "def", "continue", "enum")
 
-#show: thmrules.with(qed-symbol: $square$)
-#let proof = thmproof("proof", "Proof")
+
+// #show: thmrules.with(qed-symbol: $square$)
+#let proof = proofblock(inset: (x: 0.5em, y: 0.5em))
 
 == Alldifferent <sec:prelim:alldiff>
 
@@ -663,15 +619,15 @@ Based on these concepts, we describe the basic procedure for timetable propagati
   + (Propagation) Note that for each $t_"start"$ and activity $a$, $a$ can start at $t_start$ if we have $P(t) >= usage(a)$ for all $t$ s.t. $t_start <= t < t_start + duration(a)$. For each activity, a single pass starting from $lower(a)$ to $upper(a)$ can propagate $a >= t'$ if for all $lower(a) <= t < t'$ we have that $a$ cannot start. Similarly, a single pass starting from $upper(a)$ and down to $lower(a)$ can propagate $a <= t'$. The fact is then of the form $D(A) -> [a <= t']$ (or $[a >= t']$ if the lower pass identified a new bound). Furthermore, it is possible for $a$ to not be able to start at any time $lower(a) <= t <= upper(a)$. Then, the fact is of the form $D(A) -> bot$. 
 ] <proc:timetable>
 
-We have seen two different constraints and defined how we can describe the reasoning made by propagators using "facts". We now discuss how these facts can be combined to to form a proof of infeasibility. In the next section, we first describe proofs of infeasibility in the context of SAT, where they already standard, after which we introduce the specific proof system we use in this work.
+We have seen two different constraints and defined how we can describe the reasoning made by propagators using "facts". Furthermore, we discussed an informal strategy for verifying these facts. Before we discuss more rigorously and how these facts can be combined to construct actual unsatisfiability proofs, we look at proofs of unsatisfiability in SAT, where they are already standard. SAT can be seen as a special case of CP and ideas from SAT have also inspired the CP proof system considered in this work.
 
 // We also saw that for alldifferent we can precisely describe when there is a conflict, while for cumulative this is not possible and we instead described the propagation algorithm we seek to verify. Next, we discuss proofs of infeasibility and their relation to CP, which will serve as the necessary background to introduce the specific proof system we use.
 
 // Next, we introduce the proof system we use to write our proofs of infeasibility in and connect this to the facts we already introduced.
 
-== Proofs of infeasibility in SAT
+== Proofs of infeasibility in SAT <sec:satunsat>
 
-Proofs of infeasibility have become standard in SAT, which can be seen as a special case of CP. Ideas from SAT have also inspired the proof system considered here. Therefore, we first discuss SAT and unsatisfiability proofs for SAT, after which we discuss the CP proof system used in this work.
+The problem of determining whether a solution exists for a CSP that contains only Boolean variables and propositional constraints (in conjunctive normal form) is known as the Boolean satisfiability problem or SAT. Since SAT is NP-complete (and the first one to be proven to be as such), many other problems can be expressed in terms of SAT. Furthermore, it is in a way the "simplest" such problem, as variables can only have two possible values. For a detailed discussion of unsatisfiability proofs in SAT, see Chapter 15 of Biere et al. @biere2021handbook. We draw heavily from it.
 
 The problem of determining a solution to a CSP that contains only Boolean variables and propositional constraints (in conjunctive normal form) is also known as the Boolean satisfiability problem or SAT. Since SAT is NP-complete (and the first one to be proven to be as such), many other problems can be expressed in terms of SAT. Furthermore, it is in a way the "simplest" such problem, as variables can only have two possible values.
 
@@ -925,21 +881,26 @@ We also define the $max$ and $min$ operations in the natural way, where we have,
 
 = Related work
 
+Unsatisfiability proofs are not standard in CP. In fact, in the 2023 and 2024 editions of the XCSP competition @audemard2023xcsp3 @audemard2024xcsp3, and the MiniZinc challenge @tack2023challengeminizinc @tack2024challengeminizinc, the only solver with support for generating proofs of infeasibility was the Pumpkin solver @pumpkin2024, which is the solver that pioneered the format and proof system used in this work @flippo2024proof @sidorov2025checker.
+
 // #todosm[This seems to be true after a quick search, but make sure this really is true!]
 // Infeasibility proofs are not standard in CP. In fact, in the 2023 and 2024 editions of the XCSP competition @audemard2023xcsp3 @audemard2024xcsp3, and the MiniZinc challenge @tack2023challengeminizinc @tack2024challengeminizinc, the only solver with support for generating proofs of infeasibility was the Pumpkin solver @pumpkin2024, which is the solver that pioneered the format and proof system used in this work @flippo2024proof @sidorov2025checker.
 
-// Instead, we must look to the SAT and SMT communities, where unsatisfiability proofs are already widely used. In fact, unsatisfiability proofs have been mandatory for solvers participating in the unsatisfiability track of the SAT Competition since 2013 @sat2013. For a detailed discussion of unsatisfiability proofs in SAT, see Chapter 15 of Biere et al. @biere2021handbook. We summarize the most important details below. In fact, one of the approaches for proofs of unsatisfiability in CP, VeriPB, was actually used in the SAT Competition @bogaerts2023satcompveripb, not in the MiniZinc challenge or XCSP competition, as these have no special rules or requirements for proof logging and/or certification.
+Instead, we must look to the SAT and SMT communities, where unsatisfiability proofs are already widely used. In fact, unsatisfiability proofs have been mandatory for solvers participating in the unsatisfiability track of the SAT Competition since 2013 @sat2013. For more information on unsatisfiability proofs in SAT, see @sec:satunsat. 
 
-// Furthermore, state-of-the-art SMT solvers such as CVC4, Z3, and veriT also support proof production @barrett2015smtproofs. Barrett et al. @barrett2015smtproofs describe SMT proofs as an interleaving of SAT proofs and SMT-specific theory proofs. For this reason, we focus on SAT proofs of infeasibility.  After discussing SAT, we discuss pseudo-boolean proofs of unsatisfiability, which have already been used successfully within constraint programming. 
+State-of-the-art SMT solvers such as CVC4, Z3, and veriT also support proof production @barrett2015smtproofs. Barrett et al. @barrett2015smtproofs describe SMT proofs as an interleaving of SAT proofs and SMT-specific theory proofs. Furthermore, their proofs are mostly solver-specific or not fully specified, often requiring running the full solver to verify. Efforts to develop separate checkers often involve describing all reasoning in terms of SAT and use SAT proof formats. 
+#todosm[https://msp.cis.strath.ac.uk/types2025/slides/TYPES2025-slides67.pdf]
 
-// === Pseudo-Boolean
+If we now look at efforts to produce unsatisfiability proofs in CP, we see that these approaches often rely on SAT as well. For example, the solver by Veksler et al. @veksler2010CSPprof can produce proofs that can explain all CP reasoning in terms of SAT.
 
-// Pseudo-Boolean models consist of Boolean variables, but instead of clausal constrainsts they allow linear inequalities over these variables. Proof logging for CP was first implemented by the Glasgow CP solver @gocht2022auditable @gocht2022certifying, which encodes constraints in pseudo-Boolean form and uses a cutting planes proof system. They use an external verifier, VeriPB, to verify the proofs. This same verifier is used in the work by Flippo et al. @flippo2024proof, which introduced an initial version of the proof format used in this work, which we discuss in detail in @sec:proofsystem.
+A more recent development has been the use of pseudo-Boolean models. Like SAT, are variables are Boolean, but instead of clausal constrainsts pseudo-Boolean models allow linear inequalities over these variables. The Glasgow CP solver @gocht2022auditable @gocht2022certifying encodes CP constraints in pseudo-Boolean form and uses a cutting planes proof system. They use an external verifier, VeriPB, to verify the proofs. 
 
-// While the pseudo-Boolean approach has many benefits over earlier attempts at using SAT proofs directly in CP @veksler2010CSPprof, we summarize the findings mentioned in Flippo et al. @flippo2024proof and Sidorov et al. @sidorov2025checker that support the development of a proof system more native to CP:
+VeriPB is also used in the work by Flippo et al. @flippo2024proof, which introduced an initial version of the proof format used in this work, which we discuss in detail in @sec:proofsystem. VeriPB can also be used in SAT and has participated in the SAT Competition @bogaerts2023satcompveripb, not in the MiniZinc challenge or XCSP competition, as these have no special rules or requirements for proof logging and/or certification.
 
-// - Constraints and reasoning: Many constraints are not easy to express in pseudo-Boolean form and can have a significantly larger size. An example where this is the case is cumulative. Furthermore, the encoding must be trusted, while expressing them natively requires no transformation at all. Finally, all reasoning must be expressed in a way the pseudo-Boolean verifier understands. This hinders generalizability. 
-// - Domains: Pseudo-Boolean models only support binary variables, which means that integer variables must all be encoded in binary. It also does not allow using infinite domains, which can be useful in cases such as the linear constraint.
+Furthermore, VeriPB also has a formally verified back-end, known as CakePB @gocht2024subgraphvercakepb. They have also shown it to be possible to formally verify the encoding step. This means they can achieve a very high level of trust.
+
+
+// For this reason, we focus on SAT proofs of infeasibility.  After discussing SAT, we discuss pseudo-boolean proofs of unsatisfiability, which have already been used successfully within constraint programming. 
 
 // We do note that the verifier used by Gocht et al. @gocht2022auditable, VeriPB, also has a formally verified back-end, known as CakePB @gocht2024subgraphvercakepb. This means they can achieve a similar level of trust as our approach.
 
@@ -1095,9 +1056,9 @@ In the remainder of this section, we will make use of _unbound atomic constraint
 
 Note that if $dom$ is the domain of some variable $x$, @def:atomic_holds is equivalent to $dom$ satisfying the atomic constraint $[x diamond.small c]$ (@def:atomic and @def:constraint).
 
-
-
 We describe a procedure for checking each of the two properties specifically for perforated intervals. The first _check function_ -- @fun:check_consistency[l] -- first checks whether the lower bound is positive infinity or the upper bound is negative infinity (returning `false` in both cases) and then checks whether the lower bound is less than or equal to the upper bound. If so, it returns `true`.
+
+We describe this now using pseudocode. The syntax used and the precise definitions of e.g. `PerforatedInterval` are discussed in @appendix:pseudocode. 
 
 #funlink(<pseudo:check_consistency>, "check_consistency")
 #pseudocode(title: "Domain consistency check")[
@@ -1120,12 +1081,7 @@ The next _check function_ -- @fun:check_holds[l] -- has different behavior for e
 - For $[= c]$ constraints, it checks whether the lower and upper bounds are equal to $c$
 - For $[!= c]$, it checks whether $c$ is strictly greater than the upper bound, $c$ is strictly smaller than the lower bound, or if $c in holes$.
 
-#funlink(<desc:is_element_of>, "is_element_of")
-#fundesc(title: [Returns whether `element` is an element of `set`.])[
-  ```tiplang2
-  Definition is_element_of(element: E, set: Set[E]) -> bool:
-  ```
-] <desc:is_element_of>
+@fun:check_holds makes use of @fund:is_element_of[l].
 
 #funlink(<pseudo:check_holds>, "check_holds")
 #pseudocode(title: [Check if atomic holds for domain])[```tiplang2
@@ -1169,30 +1125,59 @@ Now that we know how to check consistency and whether an atomic constraint holds
 
 == Updates <sec:perfint:updates>
 
-For each type of atomic, a perforated interval can be updated such that the atomic holds for the perforated interval. This can, for example, be used to track the domains of variables during deduction step checking (@sec:deduct) or to extract lower and upper bounds from a fact (see @sec:res:infcheck for details).
+For each type of atomic, a perforated interval can be updated such that the atomic holds for the perforated interval. This can, for example, be used to track the domains of variables during deduction step checking (@sec:deduct) or to extract lower and upper bounds from a fact (see @sec:res:infcheck for details). The four possible updates are as follows, which are collected in the function @fun:apply_atomic[l]:
 
-- For $[<= c]$ constraints, update the upper bound by taking the maximum of the current upper bound and $c$ (using the operation defined in @sec:zext).
-- For $[>= c]$ constraints, update the lower bound by taking the minimum of the current upper bound and $c$.
-- For $[x = c]$, update the upper bound and then the lower bound just like for $<=, >=$-constraints to $c$.
-- For $[x != c]$, update $holes$ by adding $c$.
+- For $[<= c]$ atomics, update the upper bound by taking the maximum of the current upper bound and $c$ (using the operations on $Zext$ defined in @sec:zext).
+- For $[>= c]$ atomics, update the lower bound by taking the minimum of the current upper bound and $c$ (using the operation on $Zext$ defined in @sec:zext).
+- For $[= c]$ atomics, update both the upper bound and lower bounds just as for inequality atomics.
+- For $[!= c]$ atomics, add $c$ to the holes.
 
-We call the function that performs exactly this #jmono[apply_atomic(dom: PerforatedInterval, atomic: Atomic) -> PerforatedInterval], and the following lemma can be proven by examining the cases for $dlb$ and $dub$ and using the defined order on $Zext$. The lemma states that any integer is an element of a perforated interval that had an atomic applied if and only if that integer was an element of the original domain and it obeys the atomic constraint.
+#funlink(<pseudo:apply_atomic>, "apply_atomic")
+#pseudocode(title: [Update domain so that atomic holds])[```tiplang2
+Definition apply_atomic(dom: PerforatedInterval, atom: Atomic) -> PerforatedInterval:
+  match comparator(atom):
+    case less_equal:
+      new_ub := max(ub(dom), constant(atom))
+      return PerforatedInterval(lb(dom), new_ub, holes(dom))
+    case greater_equal:
+      new_lb := min(lb(dom), constant(dom))
+      return PerforatedInterval(new_lb, ub(dom), holes(dom))
+    case equal:
+      new_ub := max(ub(dom), constant(atom))
+      new_lb := min(lb(dom), constant(dom))
+      return PerforatedInterval(new_lb, new_ub, holes(dom))
+    case not_equal:
+      new_holes := add_to(constant(atom), holes(dom)
+      return PerforatedInterval(lb(dom), ub(dom), new_holes)
+```] <pseudo:apply_atomic>
+
+We now state useful specificaiton lemma for @fun:apply_atomic: it says that any integer is an element of a perforated interval that had an atomic applied if and only if that integer was an element of the original domain and it obeys the atomic constraint.
 
 #let atomic = spro[atomic]
 
-#lemma(title: [`apply_atomic` specification])[
+#lemma(title: [@fun:apply_atomic specification])[
   Let $n in ZZ$, #dom a perforated interval, and $[diamond.small c]$ an atomic constraint, then $n in #jmono[apply_atomic]\(dom, [diamond.small c]) <-> n in dom and n diamond.small c$.
 ] <lem:apply_atomic_spec>
 
-When we have a large number of atomic constraints we want to use to build a domain (during e.g. inference checking, or from the premises of a deduction step), we simply use a fold over a list of atomic constraints, which we call #jmono[apply_atomics(dom: PerforatedInterval, atomics: list Atomic) -> PerforatedInterval]. Using a straightforward induction proof, we can generalize @lem:apply_atomic_spec as follows:
+We omit its proof, which can be done by examining the cases for $dlb$ and $dub$ and using the defined order on $Zext$.
 
 #let atomics = spro[atomics]
 
-#lemma(title: [`apply_atomics` specification])[
+We also define a function that applies multiple atomic constraints to a domain, @fun:apply_atomics[l].
+
+#funlink(<desc:apply_atomics>, "apply_atomics")
+#fundesc(title: [Given a domain #dom and a list of atomics #atomics, successively updates the domain for each atomic in #atomics using @fun:apply_atomic.])[```tiplang2
+Definition apply_atomics(dom: PerforatedInterval, atoms: List[Atomic]) -> PerforatedInterval:
+```
+] <desc:apply_atomics>
+
+Using a straightforward induction proof, we can generalize @lem:apply_atomic_spec for @fun:apply_atomics as follows:
+
+#lemma(title: [@fun:apply_atomics specification])[
   Let $n in ZZ$, #dom a perforated interval and #atomics a list of atomic constraints, then $n in #jmono[apply_atomics]\(dom, atomics) <-> n in dom and (forall [diamond.small c] in atomics, n diamond.small c$).
 ]
 
-Armed with this lemma, we see that applying the order of atomic constraints has no effect on which logical domain is implied by them. This is a powerful tool for when we want to manage applying multiple atomic constraints. 
+Armed with this lemma, we see that applying the order of atomic constraints has no effect on which logical domain is implied by them, because the right hand side it states that for all atomics in #atomics, we have that domain elements must satisfy them, irrespective of the order of #atomics. This is a powerful tool for when we want to manage applying multiple atomic constraints. 
 
 In @sec:perfint:checks, we described the check functions for perforated intervals. They work correctly only when given tight domains. How to achieve tightness is described in the next section.
 
@@ -1206,10 +1191,11 @@ The tightening procedure is simple. Given a list of holes in strictly increasing
   Suppose we have a variable $x$ that we know is greater than or equal to $5$. Given a list of holes (values that we know $x$ cannot take) of [3, 5, 6, 7, 9], we first iterate until we reach 5, so then we are left with [5, 6, 7, 9]. Then the bound is updated to 6, to 7, and to 8 as we iterate. However, since there is no hole at 8, we stop. Therefore, our lower bound is updated to 8.
 ]
 
-We give pseudocode for the implementation. Here, `tighten_lb_with_holes` is "Recursive", which indicates it is a recursive function. Furthermore, the second case is the case where the list is non-empty, after which the head of the list is assigned to the variable `h` and the remaining elements to `holes'`. `filter_greater_eq(l: list Z, b: Z)` simply iterates until it finds a value greater or equal than its second argument, after which it returns all elements starting from there (in the same order as the original list).
+We give pseudocode for the two functions used in the implementation of the tightening procedure. First, we define @fun:tighten_lb_with_holes[l], which is defined using "Recursive", indicating it is a recursive function. This function computes the tightened lower bound only. The second match case is the case where the list is non-empty, after which the head of the list is assigned to the variable `h` and the remaining elements to `holes'`. 
 
-#pseudocode(title: [Tighten lower bound given holes])[```
-Recursive tighten_lb_with_holes(holes: list Z, lb: Z) -> Z:
+#funlink(<pseudo:tighten_lb_with_holes>, "tighten_lb_with_holes")
+#pseudocode(title: [Tighten lower bound given holes])[```tiplang2
+Recursive tighten_lb_with_holes(holes: List[Z], lb: Z) -> Z:
   match holes:
     case nil:
       return lb
@@ -1218,26 +1204,30 @@ Recursive tighten_lb_with_holes(holes: list Z, lb: Z) -> Z:
         return tighten_lb_with_holes(holes', lb + 1)
       else:
         return lb
-```]
-#pseudocode(title: [Tighten domain lower bound])[```
+```] <pseudo:tighten_lb_with_holes>
+
+We then define @fun:tighten_lb[l], which operates on a full domain instead. Furthermore, it ensures that redundant holes (holes smaller than the lower bound) are removed using @fund:filter_greater_eq[l], as otherwise @fun:tighten_lb_with_holes would not perform any tightening. Note that we first check if we need to do any tightening at all. Furthermore, we do not update the holes during tightening, as removal is not cheap, and we would potentially have to remove many elements after tightening the bounds.
+
+#funlink(<pseudo:tighten_lb>, "tighten_lb")
+#pseudocode(title: [Tighten domain lower bound])[```tiplang2
 Definition tighten_lb(dom: PerforatedInterval) -> PerforatedInterval:
   match lb(dom):
     case lb_value:
       if is_element_of(lb_value, holes(dom)):
         holes_from_lb := filter_greater_eq(holes(dom), lb_value)
         updated_lb := tighten_lb_with_holes(holes_from_lb, lb_value)
-        return (updated_lb, ub(dom), holes(dom))
+        return PerforatedInterval(updated_lb, ub(dom), holes(dom))
       else:
         return dom
     case _:
       return dom
-```]
+```] <pseudo:tighten_lb>
 
-Note that in `tighten_lb` we first check if we need to do any tightening at all. Furthermore, note that we do not update the holes, as removal is not cheap, and we would potentially have to remove many elements after tightening the bounds.
 
-#let tightenlbholes = jmono[tighten_lb_with_holes]
-#let tightenlb = jmono[tighten_lb]
-#let filterge = jmono[filter_greater_eq]
+
+#let tightenlbholes = [@fun:tighten_lb_with_holes]
+#let tightenlb = [@fun:tighten_lb]
+#let filterge = [@fund:filter_greater_eq]
 
 We are interested in proving two facts: *1) (tighten equivalency)* tightening the bounds produces a new domain that is equivalent to the previous one, i.e., tightening does not change the elements that can be in the domain. This is useful when we care only that the bounds produced in the domain procedures are actually valid for the variable we are looking at, not if they are as good as they could be. _Critically, this is actually all that is needed to prove the soundness of the checker._ *2) (tightening tightens)* after applying the tightening procedure (not just on the lower bound, but also the upper bound), our domain is tight. If that holds, we can apply what we learned earlier about tight domains. We begin with the fact that tightening creates a new equivalent domain. As before, we only write down the case for tightening the lower bound. 
 
@@ -1291,14 +1281,14 @@ Then, we prove the equivalence of having a bound and a hole and having a tight b
 Now that we have seen that our implementation of tightening creates an equivalent domain, we want to show that this actually creates a domain that is tight. This is not trivial to prove and relies on the $holes$ being sorted. In our implementation, the $holes$ set is implemented using a tree data structure, allowing efficient iteration in sorted order. We again state only the case for lower bounds. We first state and prove a lemma about the exact behavior of $tightenlbholes$. This is almost exactly what we want, but here we expect $holes$ to not contain any "redundant" holes. In our practical implementation, this is ensured by $filterge$.
 
 #lemma(title: [Tighten holes specification])[
-  Let $holes$ be a list of strictly increasing integers and let $dlb in ZZ$. Then, if we have that for each $h in holes, dlb <= h$, this implies $tightenlbholes(holes, dlb) in.not holes$.
+  Let $holes$ be a list of strictly increasing integers and let $dlb in ZZ$. Then, if we have that for each $h in holes, dlb <= h$, this implies @fun:tighten_lb_with_holes$(holes, dlb) in.not holes$.
 ] <lem:tighten_holes_spec>
 #proof[
   #todosm[]
 ]
 
 #lemma(title: [Tightened lower bound is not in holes])[
-  Let $dom$ be a perforated interval. Then, $dlb\(tightenlb$$\(dom))$ $in.not$ $ holes\(tightenlb$$(dom))$.
+  Let $dom$ be a perforated interval. Then, $dlb\($@fun:tighten_lb$\(dom))$ $in.not$ $ holes\($@fun:tighten_lb$(dom))$.
 ]
 #proof[
   First, observe that $tightenlb$ does not change the holes, so let $holes$ be the holes of $dom$. Furthermore, if $dlb(dom)$ is not finite or is already not an element of $holes$, we are also done. In the other case, we have that $dlb(tightenlb(dom)) = tightenfilter$. Let us abbreviate this value by $dlb'$. Therefore, we must show that $dlb' in.not holes$. First, we see that $dlb <= dlb'$ by the monotonicity of $tightenlbholes$. We will now determine that $dlb' in.not holes$ by showing that $dlb' in holes$ implies a contradiction. Since $dlb' in holes$ and also $dlb <= dlb'$, we know that $dlb' in filterge(holes, dlb)$. This is because $holes$ is sorted in strictly increasing order (by our implementation of the perforated interval), so since $filterge$ returns the part of the list to the right of $dlb$, we know the returned elements are exactly those elements in the original list greater than or equal to $dlb$. It is enough to show that $dlb' in.not filterge(holes, dlb)$, as that implies a contradiction. We can now apply @lem:tighten_holes_spec (tighten holes spec) with $holes = filterge(holes, dlb)$, which, if we substitute the meaning for $dlb'$, finishes the proof.
@@ -1366,42 +1356,6 @@ This tactic searches for a variable of type sign and, if it exists, unfolds all 
 
 This strategy removes most of the duplication present in the tightening proofs, leaving only a few cases like the actual `tighten_lb` and `tighten_ub` that work on domains.
 
-// === Alternatives
-
-// Alternative representations are:
-
-// - list of intervals
-
-// Why not that? Harder to update just lower or upper bound, more difficult logic to establish whether a not-equals constraint holds, would require a more specialized datastructure (harder to verify)
-
-// #todosm[Look up more literature]
-
-// == Fact deduction <sec:deduct>
-
-// In this section, we formalized and implement the procedure described in @sec:prelim:deduct.
-
-// === States
-
-// A domain is _tightened_ if based on the holes, the bounds are as tight as they can be. This also implies we can efficiently check whether an atomic holds. We do not care about holes outside the bounds.
-// - A domain is tightened if there is no hole at either of the bounds.  
-//   - apply $<=$: we see if there is a hole at the bound. If that is the case, we apply the tightening procedure from the upper bound going down.
-//   - apply $>=$: we see if there is a hole at the bound. If that is the case, we apply the tightening procedure from the lower bound going down.
-//   - apply $=$: do both the lower and upper
-//   - apply $!=$: see if either the lower or upper bound is at the hole, then do either lower or upper bound procedure
-
-// Note: if domain becomes inconsistent, some premises might not check anymore. So if a premise check fails, we always want to normalize.
-
-// A domain is _normalized_ if it is tightened, all holes are strictly within the bounds, and consistent; OR it is None.
-
-// For normalize I think the best way to proceed is to simply rebuild the tree.
-
-// === Operations
-
-// 1. Build a domain from a fact, for instance at the start of the deduction process (when assuming all the nogood premises) or when checking an inference. We do not expect these to be conflicting, nor do we expect there to be a lot of redundancy. Therefore, we do not care (when applying an individual atomic) whether or not the resulting domain is tightened or normalized. So we want to apply many atomics in one go.
-// 2. _After_ building the domain from the premises of a nogood, we need to check the premises of the inferences. So we want the domain to be tightened before we do this. So we need a tightening operation.
-// 3. After applying a consequent, we will do more premise checking, so we want to efficiently apply a single atomic and have the domain still be tightened afterwards.
-// 4. We want to be able to, at the end of applying all the inferences, check whether we have a conflict. For that we want to normalize it. We do not care about normalizing after applying each atomic, since we expect the conflict to be only reached at the end of the deduction step.
-
 #pagebreak(weak: true)
 
 = Deduction step checker <sec:deduct>
@@ -1410,20 +1364,49 @@ In the previous section, we introduced the perforated interval. With that as a b
 
 == Domain maps <sec:domainmap>
 
-A domain map can be constructed directly from a list of atomic constraints, which then represents the domains of the variables when assuming every atomic constraint in the list must hold. The function that does this, `domains_from_atomics(atoms: list BoundAtomic) -> Domains`, first builds a map where each variable maps to all atomics associated with exactly that variable. We then apply `apply_atomics` to all these lists with an initial perforated interval of $(-infinity, infinity, nothing)$. Note that this does not do any tightening; it simply successively updates the domain so that every atomic constraint is reflected. As tightening is relatively expensive, this saves a lot of work. To then allow tightening and checking consistency, we define `tighten_doms(doms: Domains) -> Domains` and `check_domains_consistent(doms: Domains) -> bool`, which simply apply the associated perforated interval operations to every value in the map (and in the later case returns #ttrue if every single one of them is #ttrue, and #ffalse otherwise).
+In this subsection, we will mostly avoid giving pseudocode and instead give high-level descriptions. This is because the implemention will have a significant dependence on the underlying map data structure. Furthermore, we do not go into detail about the various lemmas required for utilizing domain maps, except for the primary one necessary for soundness stated at the end. This is because these lemmas are mostly straightforward, albeit tedious, to prove. Furthermore, they are tightly coupled to our specific implementation and are mostly generalize the detailed facts we already know of the individual perforated interval operations to apply to multiple variables, or are related specifically to using the map.
 
-These operations are useful, especially when considering multiple atomic constraints at once. However, in the case of the deduction step, we must ensure, before every inference, that the domains are tight. Tightening every domain (which, if every domain is already tight, still requires a single membership check for every variable domain) is not free. For this reason, there is also `doms_apply_tighten(doms: Domains, atomic: BoundAtomic) -> option Domains`, which updates only the domain of the variable associated with the atomic, immediately tightens it again, and returns `None` if the domain becomes inconsistent. 
+A domain map can be constructed directly from a list of atomic constraints, which then represents the domains of the variables when assuming every atomic constraint in the list must hold. For this process we use the function @fun:domains_from_atomics[l].
 
-We do not go into detail about the various lemmas required for utilizing the domain maps, except for the primary one necessary for soundness. This is because these lemmas are mostly straightforward, albeit tedious, to prove. Furthermore, they are tightly coupled to our specific implementation. They simply generalize the detailed facts we already know of the individual perforated interval operations to apply to multiple variables, or are related specifically to using the map. Let us now consider the most interesting fact, which is when we call a domain map "valid". To do this, let us define some notation. When $D$ is a domain map, $D(x)$ [in the implementation, we use the notation `D d-> x`] is the perforated interval stored for the variable $x$, or simply $ZZ$ in case nothing is stored for $x$. Next, let `atoms_for_var(x: Id, atomics: list BoundAtomic) -> list Atomic` be the function that filters a list of `BoundAtomic` to extract only the atomic constraints for the given atomic variable. Then, we define the following function (where `initial_dom` = $(infinity, -infinity, nothing)$:
+#funlink(<desc:domains_from_atomics>, "domains_from_atomics")
+#fundesc(title: [Given a list of atomics #atomics, where each atomic is of the form $[x diamond.small c]$, returns a map that maps each variable to a perforated interval. This map is constructed by first constructing a map that maps each variable to the atomics in #atomics mentioning that variable. Then @fun:apply_atomics is applied with an initial perforated interval of $(-infinity, infinity, nothing)$.])[```tiplang2
+Definition domains_from_atomics(atomics: List[BoundAtomic]) -> Domains:
+```
+] <desc:domains_from_atomics>
 
+Note that @fun:domains_from_atomics does not do any tightening. As tightening is relatively expensive, this saves a lot of work when tightening is not needed. Furthermore, it is possible for some domains to be inconsistent without the function failing. When we do need tightened and consistent domains, we can use @fun:tighten_doms[l] and @fun:check_domains_consistent[l].
+
+#funlink(<desc:tighten_doms>, "tighten_doms")
+#fundesc(title: [Tightens the lower and upper bounds of all the perforated intervals stored in the map using @fun:tighten_lb and `tighten_ub` (which is defined analagously).])[```tiplang2
+Definition tighten_doms(doms: Domains) -> Domains:
+```
+] <desc:tighten_doms>
+
+#funlink(<desc:check_domains_consistent>, "check_domains_consistent")
+#fundesc(title: [Returns #ttrue if @fun:check_consistency returns #ttrue for every perforated interval stored in the map and #ffalse otherwise.])[```tiplang2
+Definition check_domains_consistent(doms: Domains) -> bool:
+```
+] <desc:check_domains_consistent>
+
+These operations are useful, especially when considering multiple atomic constraints at once. However, in the case of the deduction step, we must ensure, before every inference, that the domains are tight. Tightening every domain (which, if every domain is already tight, still requires a single membership check for every variable domain) is not free. For this reason, there is also @fun:doms_apply_tighten[l]. 
+
+#funlink(<desc:doms_apply_tighten>, "doms_apply_tighten")
+#fundesc(title: [Updates only the domain stored in the domain map for the variable named by `atomic`. It then tightens the domain and checks for consistency. If the domain become inconsitent, it returns `None`, otherwise the updated domain map wrapped in `Some`.])[```tiplang2
+Definition doms_apply_tighten(doms: Domains, atomic: BoundAtomic) -> Option[Domains]:
+```
+] <desc:doms_apply_tighten>
+
+Let us now consider the most interesting fact, which is when we call a domain map "valid". First, we define the following function (where `initial_dom` = $(infinity, -infinity, nothing)$ and we use @fund:atomics_for_var[l]):
+
+#funlink(<pseudo:applied_dom>, "applied_dom")
 #pseudocode(title: [Specification function for domain induced by atomic constraints])[
+```tiplang2
+Definition applied_dom(x: Id, atomics: List[BoundAtomic]) -> PerforatedInterval:
+  return apply_atomics(atomics_for_var(x, atomics), initial_dom)
 ```
-Definition applied_dom(x: Id, atomics: list BoundAtomic) -> PerforatedInterval:
-  apply_atomics(atoms_for_var(x, atomics), initial_dom)
-```
-]
+] <pseudo:applied_dom>
 
-The above function outputs what we would like our variable domain to look like after we construct a domain map. However, we do not actually use the above function; it simply defines the specification, which we can now state as follows:
+The above function outputs what we would like our variable domain to look like after we construct a domain map. However, we do not actually use the above function (as this woul); it is only used to define the specification. To do this, let us define some notation. When $D$ is a domain map, $D(x)$ -- in the implementation, we use the notation `D d-> x` -- is the perforated interval stored for the variable $x$, or simply all of $ZZ$ in case nothing is stored for $x$. 
 
 #let applieddom = spro[applied_dom]
 
@@ -1433,27 +1416,34 @@ The above function outputs what we would like our variable domain to look like a
 
 We skip the precise statements and proofs of the facts related to domain map validity, again because their proof relies on very specific implementation details and is rather mechanical. We quickly summarize them here:
 
-- The domain map produced by `domains_from_atomics` is valid for the atomics it is given.
-- If a domain map is valid for some list of atomics, then the result of applying `doms_apply_tighten` will also be valid for this list of atomics, as well as the additional atomic constraint that is given.
-- Since we proved that the result of `tighten_doms` is equivalent to its input, we immediately have that it also preserves domain map validity.
+- The domain map produced by @fun:domains_from_atomics is valid for the atomics it is given.
+- If a domain map is valid for some list of atomics, then the result of applying @fun:doms_apply_tighten will also be valid for this list of atomics, as well as the additional atomic constraint that is given.
+- Since we proved that the result of @fun:tighten_doms is equivalent to its input, we immediately have that it also preserves domain map validity.
 
 Before moving on to the implementation of the deduction step, we also mention how domain maps are useful for inference checking.
 
 === Inference checking <sec:res:infcheck>
 
-An inference of the form $a_1 and ... and a_m -> q$ can often be verified more easily by explicitly considering the domains of variables, as opposed to looking at the atomic constraints. More precisely, inferences can be verified if their associated constraint cannot be satisfied given the domain implied by $a_1 and ... and a_m and not q$. However, it is often useful for inference checking to know which variable is mentioned in the right-hand side, as this can provide a hint that speeds up verification in some cases (this is particularly important for the cumulative checker). For this reason, we define the following functions:
+#let var = jmono[var]
 
+An inference of the form $a_1 and ... and a_m -> q$ can often be verified more easily by explicitly considering the domains of variables, as opposed to looking at the atomic constraints. More precisely, inferences can be verified if their associated constraint cannot be satisfied given the domain implied by $a_1 and ... and a_m and not q$. However, it is often useful for inference checking to know which variable is mentioned in the right-hand side, as this can provide a hint that speeds up verification in some cases (this is particularly important for the cumulative checker). For this reason, we define two functions. First, using @fund:negate_bound_atomic[l], we define @fun:atomics_from_fact[l], which, given a fact $a_1 and ... a_m -> q$, returns the atomics $a_1, a_2, ..., a_m, not q$ as well as $var(q)$.
+
+#funlink(<pseudo:atomics_from_fact>, "atomics_from_fact")
 #pseudocode(title: [Extract consequent variable and convert to conflict form])[```tiplang2
-Definition atomics_from_fact(fact: ProofFact) -> option[Id]*list[BoundAtomic]:
+Definition atomics_from_fact(fact: ProofFact) -> Option[Id]*List[BoundAtomic]:
   match consequent(fact):
     case None:
       return (None, premises(fact))
     case Some(consq_var, consq_atomic):
       negated := negate_bound_atomic((consq_var, consq_atomic))
       return (Some(consq_var), negated :: premises(fact))
-```]
+```] <pseudo:atomics_from_fact>
+
+The second function -- @fun:infer_domains[l] -- then uses @fun:atomics_from_fact and the previously defined domain map operations.
+
+#funlink(<pseudo:infer_domains>, "infer_domains")
 #pseudocode(title: [Infer domain map and consequent variable from fact])[```tiplang2
-Definition infer_domains(fact: ProofFact) -> option[Domains*option[Id]]:
+Definition infer_domains(fact: ProofFact) -> Option[Domains*Option[Id]]:
   (maybe_consq_var, atomics) := atomics_from_fact(fact)
   doms := domains_from_atomics(atomics)
   doms_tight := tighten_doms(doms)
@@ -1461,9 +1451,9 @@ Definition infer_domains(fact: ProofFact) -> option[Domains*option[Id]]:
     return Some(doms_tight, maybe_consq_var)
   else:
     return None
-```]
+```] <pseudo:infer_domains>
 
-We see that `infer_domains` returns exactly the domain map implied by $a_1 and ... and a_m and not q$, as well as the variable for $q$. It also checks for consistency, since that usually indicates there is something wrong with the inference. For `infer_domains` to be useful, we need a useful specification for it. For this, we introduce a second way for a domain map to be valid, but in this case with respect to a solution instead of a list of atomics. Note that this is exactly the same as in @def:assignment.
+We see that @fun:infer_domains returns exactly the domain map implied by $a_1 and ... and a_m and not q$, as well as the variable for $q$. It also checks for consistency, since that usually indicates there is something wrong with the inference. For @fun:infer_domains to be useful, we need a useful specification for it. For this, we introduce a second way for a domain map to be valid, but in this case with respect to a solution instead of a list of atomics. Note that this is exactly the same as in @def:assignment (assignments).
 
 #definition(title: [Domain map consistent with solution])[
   Let $v$ be an assignment and $D$ a domain map. Then we say $v$ is consistent with respect to $D$ if for all $x$, we have $v(x) in D(x)$.
@@ -1477,11 +1467,11 @@ We now relate it to the concept of domain map validity we introduced earlier.
   2. $v$ is consistent with respect to $D$
 ]
 
-This finally gives rise to the specification of `infer_domains`:
+This finally gives rise to the specification of @fun:infer_domains:
 
 #let fact = jmono[fact]
 
-#lemma(title: [Specification of `infer_domains`])[
+#lemma(title: [Specification of @fun:infer_domains])[
   Let $fact$ be a fact and $D$ a domain map. Then, if `infer_domains(fact) = Some (D, _)`, we have that the following are equivalent:
   1. $v$ is *not* consistent with respect to $D$
   2. $v$ satisfies $fact$
@@ -1489,12 +1479,12 @@ This finally gives rise to the specification of `infer_domains`:
 
 To see why this is useful, consider the following generic inference checker, where we assume `domain_cannot_satisfy_my_constraint` is a function that, when it returns `true`, is indeed correct that the constraint cannot be satisfied for the particular domain:
 
-#pseudocode(title: [Propagator inference checker structure])[```
+#pseudocode(title: [Propagator inference checker structure])[```tiplang2
 Definition my_checker(fact: Fact, constraint: MyConstraint) -> bool:
   match infer_domains(fact):
     case None:
       return false
-    case Some (doms, _):
+    case Some(doms, _):
       if domain_cannot_satisfy_my_constraint(doms, constraint):
         return true
       else:
@@ -1507,50 +1497,61 @@ Proving soundness involves proving that if the checker returns #ttrue for a part
   Let $C$ be a constraint of type `MyConstraint` and let $fact$ be a fact s.t. `my_checker(fact, C) = true`. Then for all assignments $v$ that satisfy $C$, we have that they also satisfy $fact$. 
 ]
 #proof()[
-  Let $v$ be an assignment that satisfies $C$. Since `my_checker(fact, C) = true`, we see that `infer_domains(fact)` must have resulted in some domain $D$. We can then rewrite our goal using @lem:infer_domains_correct (`infer_domains` specification). We must then show that $v$ is not consistent with respect to $D$. But this is exactly what `domain_cannot_satisfy_my_constraint` tests for, which we now to be `true` because our checker returned #ttrue.
+  Let $v$ be an assignment that satisfies $C$. Since `my_checker(fact, C) = true`, we see that @fun:infer_domains`(fact)` must have resulted in some domain $D$. We can then rewrite our goal using @lem:infer_domains_correct (@fun:infer_domains specification). We must then show that $v$ is not consistent with respect to $D$. But this is exactly what `domain_cannot_satisfy_my_constraint` tests for, which we now to be `true` because our checker returned #ttrue.
 ]
 
 == Deduction implementation
 
-The implementation of the deduction step follows @proc:deduct very closely. The premises are first converted to a domain map in one go using `domains_from_atomics`. After that, the domains are tightened so that we can efficiently check whether a premise holds for a domain. This is done by `all_premises_hold`, which relies on `check_holds` that works on perforated intervals and atomics. Finally, the consequent of each inference (after the premises are checked to hold) is applied using `doms_apply_tighten`, which ensures the domains remain tight throughout the deduction procedure. We now state the pseudocode for our implementation.
+The implementation of the deduction step is recursive, but otherwise follows @proc:deduct. 
+
+// The premises are first converted to a domain map in one go using `domains_from_atomics`. After that, the domains are tightened so that we can efficiently check whether a premise holds for a domain. This is done by `all_premises_hold`, which relies on `check_holds` that works on perforated intervals and atomics. Finally, the consequent of each inference (after the premises are checked to hold) is applied using `doms_apply_tighten`, which ensures the domains remain tight throughout the deduction procedure. 
+We now state the pseudocode for our implementation, where we use "Inductive" to mean a data type with multiple possible cases, which can optionally also contain data of another type (known also as an enum or union). First we define the recursive step @fun:step_inference[l] using @fund:all_premises_hold[l], which itself relies on @fun:check_holds. Furthermore, we now see the use of @fun:doms_apply_tighten[l] to apply the consequent of an inference fact.
 
 #pseudocode(title: [Deduction recursive step result])[
-```
+```tiplang2
 Inductive DeductStep:
-  case deduct_domains(domains:  Domains)
+  case deduct_domains(domains: Domains)
   case deduct_valid
   case deduct_reject
 ```
 ]
-#pseudocode(title: [Deduction check result])[
-```
-Inductive CheckDeductResult:
-  case deduced
-  case failed
-```
-]
 
+
+#funlink(<pseudo:step_inference>, "step_inference")
 #pseudocode(title: [Recursive step for one inference])[
-```
+```tiplang2
 Definition step_inference(fact: ProofFact, domains: Domains) -> DeductStep:
   if all_premises_hold(premises(fact), domains):
     match consequent(fact):
       case None:
         return deduct_valid
-      case Some consequent:
+      case Some(consequent):
         match doms_apply_tighten(domains, consequent):
           case None:
             return deduct_valid
-          case Some domains':
+          case Some(domains'):
             return deduct_domains(domains')
   else:
     return deduct_reject
 ```
-]
+] <pseudo:step_inference>
 
-#pseudocode(title: [Deduction checker with initialized domains])[
+As we can see, either the domain is updated, or we find that updating leads to an inconsistency (in which case the nogood is valid), or we see that some inference cannot be applied because its premises are not satisfied. Now we define the outer recursive function: @fun:deduct_check_inferences[l].
+
+#pseudocode(title: [Deduction check result])[
+```tiplang2
+Inductive CheckDeductResult:
+  case deduced
+  case failed
 ```
-Recursive deduct_check_inferences(facts: list ProofFact, domains: Domains) -> CheckDeductResult:
+]
+#funlink(<pseudo:deduct_check_inferences>, "deduct_check_inferences")
+#pseudocode(title: [Deduction checker with initialized domains])[
+```tiplang2
+Recursive deduct_check_inferences(
+  facts: List[ProofFact], 
+  domains: Domains
+) -> CheckDeductResult:
   match facts:
     case nil:
       return deduct_failed
@@ -1563,25 +1564,31 @@ Recursive deduct_check_inferences(facts: list ProofFact, domains: Domains) -> Ch
         case deduct_reject:
           return deduct_failed
 ```
-]
+] <pseudo:deduct_check_inferences>
 
+However, @fun:deduct_check_inferences can only be initialized with domains. However, in the deduction step we are verifying a fact. More specifically, we are verifying a nogood, which has no consequent and is therefore defined only by its premises. This gives @fun:check_deduct[l].
+
+#funlink(<pseudo:check_deduct>, "check_deduct")
 #pseudocode(title: [Deduction checker])[
-```
-Definition check_deduct(premises: list BoundAtomic, steps: list ProofFact) -> CheckDeductResult:
+```tiplang2
+Definition check_deduct(
+  premises: List[BoundAtomic], 
+  steps: List[ProofFact]
+) -> CheckDeductResult:
   doms := domains_from_atomics(premises)
   doms_tight := tighten_doms(doms)
   if check_domains_consistent(doms):
     return deduct_check_inferences(steps, doms_tight)
   else:
-    return inconsistent_premises
-```
-]
+    return failed
+``` 
+] <pseudo:check_deduct>
 
-Before we state the main correctness lemma, which does not actually mention domain maps as these are an implementation detail and not present in the signature of `check_deduct`, we state the lemma that specifies the correctness of `deduct_check_inferences`. This is also the main inductive proof and the most difficult part of the deduction step.
+Before we state the main correctness lemma, which does not actually mention domain maps as these are an implementation detail and not present in the signature of @fun:check_deduct, we state the lemma that specifies the correctness of @fun:deduct_check_inferences. This is also the main inductive proof.
 
 #let steps = jmono[steps]
 
-#lemma(title: [Correctness of `deduct_check_inferences`])[
+#lemma(title: [Correctness of @fun:deduct_check_inferences])[
   Let $v$ be an assignment, $atomics$ a list of atomic constraints, and $D$ a domain map s.t. $D$ is valid for $atomics$. Furthermore, let $steps$ be a list of inference facts. Then, if we have that $v$ satisfies every inference $s in steps$ and if `deduct_check_inferences(steps, D) = deduced`, then $v$ satisfies the fact with premises equal to $atomics$ and an empty consequent.
 ] <lem:deduct_check_inferences>
 
@@ -1589,11 +1596,11 @@ We omit the proof as it follows quite easily when performing induction over $ste
 
 With the above lemma in hand, we can state the primary lemma that is used by the checker, which does not care about how domains are actually implemented.
 
-#lemma(title: [Correctness of `check_deduct`])[
-  Let $v$ be an assignment, $atomics$ a list of atomic constraints, and $steps$ a list of inference facts. Then, if we have that $v$ satisfies every inference $s in steps$ and if `check_deduct(atomics, steps) = deduced`, then $v$ satisfies the fact with premises equal to $atomics$ and an empty consequent.
+#lemma(title: [Correctness of @fun:check_deduct])[
+  Let $v$ be an assignment, $atomics$ a list of atomic constraints, and $steps$ a list of inference facts. Then, if we have that $v$ satisfies every inference $s in steps$ and if @fun:check_deduct`(atomics, steps) = deduced`, then $v$ satisfies the fact with premises equal to $atomics$ and an empty consequent.
 ] <lem:deduct_check>
 
-We omit the proof as it follows immediately from `deduct_check_inferences` and the properties of the domain map operations.
+We omit the proof as it follows immediately from @fun:deduct_check_inferences and the properties of the domain map operations.
 
 == Implementation considerations
 
@@ -1635,22 +1642,33 @@ We saw in @sec:prelim:alldiff that, according to @thm:hall, there is a necessary
   No,w based on our assumptions, $n$ is an element of $domunion$ exactly if there exists an $x'$ such that $x' in vars$ and $n in doms(x')$. Let $x$ be this $x'$. The first condition we already showed, and since $v(x) in doms(x)$, we must have that $n in doms(x)$. 
 ]
 
-We now present the pseudocode for the actual checker, which we prove to be sound with the earlier lemma. We use the functions from @sec:res:infcheck (inference checking results), in particular, `infer_domains`. However, we are interested in computing the length of the union of all domains. To do this using perforated intervals would require taking the min/max of the bounds as well as the intersection of all holes. However, to simplify our proofs and implementation, we instead chose to first materialize every perforated interval into a finite set of values (as this also fits more with the previous lemma) and then compute the union. To materialize a perforated interval, we first construct a range from the upper to the lower bound and then remove every hole. An alternative would be to check first if an element in the range is a hole before adding it to the final set, but we chose the first implementation for simplicity. We will not go into detail about this implementation. We do note that any variables without a finite domain are not included in `materialize_vars_doms`, which gives a list of materialized domains for the given variables using the given domains. For this reason, we also use the length of this result, instead of directly using the number of variables in the constraint. Next, `union_sets` computes the union of a list of sets. `cardinal` is used instead of `length` because `union_sets` returns a set, not a list.
+We now present the pseudocode for the actual checker, which we prove to be sound with the earlier lemma. We use the functions from @sec:res:infcheck (inference checking results), in particular, @fun:infer_domains[l]. 
 
-#pseudocode(title: [Alldifferent inference checker])[
+To apply @lem:alldiff_suff, we must compute length of the union of all domains. To do this using perforated intervals would require taking the min/max of the bounds as well as the intersection of all holes. However, to simplify our proofs and implementation, we instead choose to first materialize every perforated interval into a finite set of values and then compute the union. We do this with @fun:materialize_vars_doms[l].
+
+#funlink(<desc:materialize_vars_doms>, "materialize_vars_doms")
+#fundesc(title: [For each variable in `vars`, looks up the perforated interval in `domains` and, if it is bounded, materializes it as a set of values and adds it to the output list. The materialization is performed by first constructing a range from the upper to the lower bound and then remove every hole. An alternative would be to check first if an element in the range is a hole before adding it to the final set, but we choose the first implementation as it is simpler.])[```tiplang2
+Definition materialize_vars_doms(vars: List[Id], domains: Domains) -> List[Set[Z]]:
 ```
+] <desc:materialize_vars_doms>
+
+We can now define @fun:alldifferent_checker[l]. Instead of the length of all variables in the fact, we use the length of `materialized_doms` since for some variables in the fact the inferred domain might not be bounded. Furthermore, we use the functions @fund:cardinal and @fund:union_sets.
+
+#funlink(<pseudo:alldifferent_checker>, "alldifferent_checker")
+#pseudocode(title: [Alldifferent inference checker])[
+```tiplang2
 Definition alldifferent_checker(fact: ProofFact, constraint: AlldifferentConstraint) -> bool:
   match infer_domains(fact):
     case None:
       return false
-    case Some (domains, _):
+    case Some(domains, _):
       materialized_doms := materialize_vars_doms(variables(constraint), domains)
       return cardinal(union_sets(materialized_doms)) <? length(materialized_doms)
 ```  
-]
+] <pseudo:alldifferent_checker>
 
 
-Our checker has one significant limitation: to guarantee the fact is verified, the fact may only mention the actual conflicting variables (i.e., the variables in the tight Hall set), since our checker has no way to actually determine which variables are the conflicting ones. This would require a significantly more complex algorithm (see @proc:findhall). However, this algorithm would not have to be verified for soundness, since as long as we know which variables to look at, we can determine that the constraint has no solution. We give an example of a fact our checker cannot verify.
+Our checker has one significant limitation: to guarantee the fact is verified, the fact may only mention the actual conflicting variables (i.e., the variables in the tight Hall set), since our checker has no way to actually determine which variables are the conflicting ones. This would require a significantly more complex algorithm (see @proc:findhall). However, the additional parts would not have to be verified for soundness, since once we know which variables we must look at we can apply the above checker to those variables and use its correctness to prove soundness. We give an example of a fact our checker cannot verify.
 
 #example(title: [Incorrect rejection of valid fact])[
   Consider the domains $D(x) = {1, 3}, D(y) = {1, 3}, D(z) = {1, 3}, D(r) = {2, 4}$. The alldifferent constraint with variables ${x, y, z, r}$ would not have a solution, since if we take the conflicting variables ${x, y, z}$, we see there are only two values to choose from. However, if we also include the domain of $r$ into our fact, our checker would count 4 variables and 4 values, which is perfectly fine, and hence the checker would reject the fact.
@@ -1658,7 +1676,7 @@ Our checker has one significant limitation: to guarantee the fact is verified, t
 
 == Implementation considerations <check:alldiff:impl>
 
-In order to prove soundness using @lem:alldiff_suff (sufficient condition for alldifferent unsatisfiability), we must construct the required $vars$, $domunion$, and $doms$ that fulfill the lemma's requirement. As we designed the lemma to be mostly agnostic to the checker's implementation details, we cannot use the result of `infer_domains` for $doms$ (this implementation-agnostic design is discussed in more detail in @sec:rocq:twocat). Furthermore, we also cannot simply use all variables in the domain map, since the fact might include variables that are not in the constraint. While we will not provide the full checker soundness proof here, we do give our choice for these variables, as the rest is mostly straightforward and mechanical. First, let $D$ be the domain map that results from `infer_domains`. 
+In order to prove soundness using @lem:alldiff_suff (sufficient condition for alldifferent unsatisfiability), we must construct $vars$, $domunion$, and $doms$ s.t. they fulfill the lemma's requirement. As we designed the lemma to be mostly agnostic to the checker's implementation details, we cannot use the result of `infer_domains` for $doms$ (this implementation-agnostic design is discussed in more detail in @sec:rocq:twocat). Furthermore, we also cannot simply use all variables in the domain map, since the fact might include variables that are not in the constraint. While we will not provide the full checker soundness proof here, we do give our choice for these variables, as the rest is mostly straightforward and mechanical. First, let $D$ be the domain map that results from `infer_domains`. 
 - For $vars$ we take all keys of $D$ and filter out those that are not bounded, after which we filter out those that are not contained in the constraint. 
 - For $doms$ we define $doms(x)$ as the materialized version of $D(x)$ if $D(x)$ is finite, and an empty set either if $x$ is not in $D$ or if $D(x)$ is infinite. 
 - For $domunion$ we choose exactly the union that the checker also picks, so `union_set(materialize_vars_doms(variables(constraint), domains))`. 
@@ -1702,7 +1720,7 @@ Now that we know the types of conflicts our checker should find, we design two c
 
 // In this subsection, we assume that a fact has already been converted from a list of atomic constraints to a list of lower and upper bound pairs, annotated also with the corresponding activity's duration and resource usage. This is discussed in more detail in the next subsection.
 
-*Time conflict checker.* #jmono[resource_profile(capacity, times, bounded_activities)], computes a resource profile over a given set of times, reporting whether it finds a time conflict at any of the times. For each $t$, the value it reports is the capacity minus the sum of the usages of all activities mandatory at that $t$. This is the difference between the constraint capacity and the standard resource profile as defined in @sec:timetable ($P(t)$ in @proc:timetable, step 2). It works by traversing the given `times` and then computing for each activity in `bounds` whether it is mandatory based on its bounds. The computation exactly follows the definition given in @sec:timetable.
+*Time conflict checker.* @fun:resource_profile#jmono[(capacity, times, bounded_activities)], computes a resource profile over a given set of times, reporting whether it finds a time conflict at any of the times. For each $t$, the value it reports is the capacity minus the sum of the usages of all activities mandatory at that $t$. This is the difference between the constraint capacity and the standard resource profile as defined in @sec:timetable ($P(t)$ in @proc:timetable, step 2). It works by traversing the given `times` and then computing for each activity in `bounds` whether it is mandatory based on its bounds. The computation exactly follows the definition given in @sec:timetable.
 
 *Activity conflict checker.* #jmono[can_schedule_activity_with_profile(activity, profile)], takes as input a resource profile (as computed by #jmono[resource_profile], so with the remaining capacity instead of the used capacity) on all times from (for an activity $x$) from $lower(x)$ (inclusive) to $upper(x) + duration(x)$ (exclusive) and reports whether it is possible to schedule it at any of those time. Here, it assumes that the particular activity can be scheduled at times when it is mandatory. If it cannot find any such time, it reports an activity conflict. It works by mapping the given profile to a list of booleans, where the boolean represents whether the activity can be active at that time. This is computed (for an activity $x$) by checking as the result of $P(t) >= usage(x)$ (as in @proc:timetable, propagation) for each time, with the value always being #ttrue if $x$ is mandatory (since we assume the case where it cannot be active in that case to be caught by the time conflict checker). This list of booleans is then traversed to find $duration(x)$ number of #ttrue values in a row (so if the duration is 3, the resulting list must be a run of 3 #ttrue\s). If it can find such a run, we know we can at least schedule the activity there, and hence there is no conflict.
 
@@ -1713,8 +1731,8 @@ Since we base the activity conflict check on the propagation performed in the ti
 === Step 5: infer domain and combine
 
 Based on the two functions of step 3 and our use of the consequent as a hint, we now have all the ingredients to summarize the main steps of the checker.
-+ Given a fact, checker uses `infer_domains` from @sec:res:infcheck to get the domains of the activity's starting times as perforated intervals. From these intervals, the checker extracts the lower and upper bounds and adds their capacity and usage information. See @check:cumul:impl for additional details.
-+ From `infer_domains`, the checker also gets whether the fact has a consequent and the variable of that consequent. If it does, we will first seek to determine a conflict for the activity present in the consequent. It does this using the #jmono[resource_profile] function applied to the time range $[lower, upper]$. If there is a time conflict in that range, the inference is also valid. Otherwise, the profile is given to #jmono[can_schedule_activity_with_profile], which returns false in case there is a conflict. If there is no conflict, proceed to the next step.
++ Given a fact, checker uses @fun:infer_domains[l] to get the domains of the activity's starting times as perforated intervals. From these intervals, the checker extracts the lower and upper bounds and adds their capacity and usage information. See @check:cumul:impl for additional details.
++ From @fun:infer_domains, the checker also gets whether the fact has a consequent and the variable of that consequent. If it does, we will first seek to determine a conflict for the activity present in the consequent. It does this using the @fun:resource_profile function applied to the time range $[lower, upper]$. If there is a time conflict in that range, the inference is also valid. Otherwise, the profile is given to #jmono[can_schedule_activity_with_profile], which returns false in case there is a conflict. If there is no conflict, proceed to the next step.
 + If no conflict could be determined on the consequent's bounds or if there was no consequent, a resource profile will be constructed that ranges from the minimum start time among all variables to the maximum start time among all variables. If no conflict can be determined, it proceeds to the next step.
 + If the previous cases failed, the checker will seek to determine a conflict by checking all activities in the same way as it checked the one associated with the consequent. Once it finds one, it will report it. Otherwise, the checker fails to verify the inference.
 
@@ -1722,57 +1740,57 @@ In the next section, we give a more complete description of the above algorithm 
 
 == Algorithm description <sec:check:cumul:algodesc>
 
-In step 1 we extract the lower and upper bounds of each activity and collect them together with their other parameters (resource usage, activity duration). We call this specific type `BoundedActivity`. The procedures in this section all work on this type.
+In step 1 we extract the lower and upper bounds of each activity and collect them together with their other parameters (resource usage, activity duration). We call this specific type `BoundedActivity` (@pseudo:boundedact). The procedures in this section all work on this type.
 
-#pseudocode[Type that is used to represent an activity during checking][```tiplang
+#pseudocode[Type that is used to represent an activity during checking][```tiplang2
 Record BoundedActivity:
-  lower: int
+  lower: Z
   upper: Z
   duration: N
   usage: N
-```]
+```] <pseudo:boundedact>
 
 
+The function that performs step 1 is @fun:infer_cumulative_activity_bounds[l]. 
 
-#funlink(<desc:infer_cumulative_ounds>, "infer_cumulative_bounds")
+#funlink(<desc:infer_cumulative_activity_bounds>, "infer_cumulative_activity_bounds")
 #fundesc(title: [
-    This function uses 
+    Uses @fun:infer_domains[l] to infer domains from a fact. It then returns only those activities with bounded start times as `BoundedActivity`, including each activity's parameters from the constraint definition. The option in the return type is the activity associated with the consequent (if it exists). Note that the activity in the consequent also exists in the returned list of activities. If the fact itself is inconsistent, the list will be empty.
   ])[
   ```tiplang2
-  Definition infer_cumulative_bounds(constraint: i32, fact: str) -> InferResult:
+  Definition infer_cumulative_activity_bounds(
+    constraint: CumulativeConstraint, 
+    fact: ProofFact
+  ) -> List[BoundedActivity]*Option[BoundedActivity]:
   ```
-] <desc:infer_cumulative_bounds>
+] <desc:infer_cumulative_activity_bounds>
 
 
-The function that performs step 1 is @fun:infer_cumulative_bounds. The result can either be that the fact is inconsistent (i.e., the atomic constraints imply an empty domain) or a `(list BoundedActivity, option BoundedActivity)` pair, where the optional activity refers to the activity associated with the variable in the consequent of the fact. The function makes use of the #jmono[infer_domains] of @sec:perfint and the parameters in the constraint.
 
 Now, let us define the two functions from the previous section in detail.
 
-The #jmono[resource_profile] is defined in a natural way. For each element of the range of times it receives, it simply computes what activities are mandatory and adds up their usages, subtracting them from the constraint capacity. In case this would result in something less than zero, it reports an error instead. We describe this in pseudocode, noting that some optimizations have been removed for the sake of exposition (see also @check:cumul:impl). The function #jmono[is_mandatory] computes whether an activity is mandatory at time $t$ (by checking whether, for an activity $x$, $upper(x)$ <= t < $lower(x) + duration(x)$ holds). #jmono[xn_sum(l: list (Id \* N)) -> N] takes as input a list of variable-usage pairs and adds up all the usages. It is useful to include the variable for the proof. Finally, #jmono[map_valid(f: A -> B | error, l: list A) -> list B | error] is like a standard `map`, but will report a conflict if any of the individual operations report a conflict.
+@fun:resource_profile works as follows. For each element of the range of times it receives, it simply computes what activities are mandatory and adds up their usages. If this exceeds the capacity, an error is returned. Otherwise it returns the difference between the capacity and the usage. We describe this in pseudocode, noting that some optimizations have been removed for the sake of exposition (see also @check:cumul:impl). The function uses @fund:filter_mandatory[l] and @fund:n_sum[l]. To ensure it can actually catch time conflicts, we use @fund:map_valid[l], which will return `None` if any of the `resource_profile_t` calls returned `None`.
 
-```py
-def abc():
-  a = 3
-```
-
-```tiplang
-Definition abc -> string:
-  a := 3
-```
-
-#pseudocode[][```tiplang2
-Definition resource_profile_t(capacity: N, bounds: list[ActivityBound], t: Z) -> N|time_conflict:
-  mandatory_at_t := filter(is_mandatory(t), bounds)
-  mandatory_at_t_xn_list := map(b -> (var(b), usage(b)), mandatory_at_t)
-  sum := xn_sum(mandatory_at_t_xn_list)
-  if capacity < sum:
-    return time_conflict
+#funlink(<pseudo:resourceprofile>, "resource_profile")
+#pseudocode(title: [Resource profile construction and time conflict checker])[```tiplang2
+Definition resource_profile_t(
+  capacity: N, 
+  activity_bounds: List[ActivityBound], 
+  t: Z
+) -> Option[N]:
+  mandatory_at_t := filter_mandatory(t, activity_bounds)
+  mandatory_usages := map(usage, mandatory_at_t)
+  mandatory_usage := n_sum(mandatory_usages)
+  if capacity <? mandatory_usage:
+    return None
   else:
-    return sum
+    return Some[capacity - mandatory_usage]
 
-Definition resource_profile(capacity: N, times: list Z, bounds: list[ActivityBound]) -> list[N]|time_conflict:
+Definition resource_profile(capacity: N, times: list Z, bounds: List[ActivityBound]) -> Option[List[N]]:
   return map_valid(resource_profile_t(capacity, bounds), times)
-```]
+```] <pseudo:resourceprofile>
+
+Next is 
 
 Given an activity $x$ and its bounds, the #jmono[cannot_schedule_activity_with_profile] works by first converting the profile given to a list of bools that correspond to whether the activity can be active at the associated time. For each profile entry (it assumes the elements correspond exactly to the times $[lower(x), lower(x) + 1, ..., upper(x)]$), it first determines whether it is mandatory at that time. If it is, the value is `true`, since it is assumed the profile was already checked and did not exceed the capacity. Otherwise, it sees if the profile value (which is the remaining amount of resources after subtracting the usage of all mandatory activities) is greater than or equal to the resource usage of the activity. If it is, then the activity can be active and the value is `true`; otherwise, it is set to `false`. The list of bools is then traversed. If it can find a set of consecutive `true` entries of length equal to the activity's processing time, the activity can be scheduled, and the function will return false. 
 
@@ -1783,30 +1801,42 @@ The pseudocode can be found below. We again use the #jmono[is_mandatory] functio
     caption: [#todo[show example of the 'active list' for a particular example]],
   ) <img:cum:activelist>
 
+#funlink(<pseudo:profile_to_active_list>, "can_schedule_activity_with_profile")
+#pseudocode()[```tiplang2
+Definition check_can_be_active(bounded_activity: ActivityBound, usage_left: N, t: Z) -> bool:
+  return is_mandatory(t, bound) or (usage(bound) <= usage_left)
+
+Definition profile_to_active_list(bound: ActivityBound, profile: List[N]) -> List[bool]:
+  profile_range := range(lower(bound), lower(bound) + length(profile))
+  profile_with_times := combine(profile, profile_range)
+  return map(can_be_active(bound), profile_with_times)
+```]
+  
+#funlink(<pseudo:can_schedule_activity_with_profile>, "can_schedule_activity_with_profile")
 #pseudocode[][```tiplang2
 Definition can_be_active(bound: ActivityBound, usage_left: N, t: Z) -> bool:
   return is_mandatory(t, bound) or (usage(bound) <= usage_left)
 
-Definition profile_to_active_list(bound: ActivityBound, profile: list[N]) -> list[bool]:
+Definition profile_to_active_list(bound: ActivityBound, profile: List[N]) -> List[bool]:
   profile_range := range_inclusive(lower(bound), lower(bound) + length(profile) - 1)
   profile_with_times := combine(profile, profile_range)
   return map(can_be_active(bound), profile_with_times)
   
-Definition cannot_schedule_activity_with_profile(bound: ActivityBound, profile: list[N]) -> bool:
+Definition can_schedule_activity_with_profile(bound: ActivityBound, profile: List[N]) -> bool:
   active_list := profile_to_active_list(bound, profile)
   return has_n_true(duration(bound), active_list)
-```]
+```] <pseudo:can_schedule_activity_with_profile>
 
 Before we give the pseudocode of the main checker definition, we mention two additional functions. #jmono[cannot_schedule_activity(capacity: N, bounds: list ActivityBound, bound: ActivityBound) -> bool] composes the previously discussed #jmono[resource_profile] and #jmono[cannot_schedule_activity_with_profile] functions. It returns `true` if either the resource profile had a conflict or if it found an activity conflict. It builds the resource profile only on the timepoints within the activity's bounds. Finally, #jmono[resource_profile_full(capacity: N, bounds: list ActivityBound) -> bool] determines the earliest and latest possible starting times of all activities and then builds a resource profile on that interval, returning `true` if it can find a time conflict.
 
 Written in pseudocode, the checker then looks like the following. As the name suggests, #jmono[any_true] runs a partially applied function on all elements of a list, returning `true` if any of them return `true`.
 
 #pseudocode[```tiplang2
-Definition cumulative_checker(fact: Fact, constraint: CumulativeConstraint) -> bool:
-  match inferred_cumulative_bounds(constraint, fact):
-    case inconsistent_fact:
+Definition cumulative_checker(fact: ProofFact, constraint: CumulativeConstraint) -> bool:
+  match infer_cumulative_activity_bounds(constraint, fact):
+    case (nil, _):
       return false
-    case activity_bounds, maybe_rhs_bound:
+    case (activity_bounds, maybe_rhs_bound):
       match maybe_rhs_bound:
         case Some(rhs_bound):
           if cannot_schedule_activity(capacity(constraint), activity_bounds, 
@@ -1881,9 +1911,7 @@ Next, we state lemmas (saving their proofs for later) for the correctness of #ca
 
 We now focus on proving @lem:resource_profile_contradiction, which means we must show that for #bounds satisfying some assignment $A$ that satisfies $C$, no time conflict should be found by #resprofile. The main idea is that when $A$ satisfies $C$, the usage at all timepoints should be less than $capacity(C)$, and since the set of mandatory activities is a subset of the set of active activities, the usage of all mandatory activities should also be less than the capacity and no conflict should be found.
 
-
-
-#proof([of @lem:resource_profile_contradiction])[
+#proof(of: <lem:resource_profile_contradiction>)[
   For any list of timepoints #times, no time conflict should be found. That is equivalent to showing that there is some $t in times$ s.t. #jmono[resource_profile_t]$(capacity(C), bounds, t)$ returns a time conflict. Using the definition of that function, it returns a conflict if the $capacity(C)$ is strictly less than the sum of all usages of activities that are mandatory at $t$. Furthermore, since $A$ satisfies $t$, we know that the sum of the usages of active activities according to $A$ is less than or equal to $capacity(C)$. Let #l_active_t be this list of active activities at $t$, identified only by the pair $(x, usage(x))$ (for an activity $x$). Let #l_mandatory_t be the list of activities that are mandatory at $t$, also consisting of variable-usage pairs. We know $#xn_of[#l_active_t] <= capacity(C)$, so to derive a contradiction it is enough to show $#xn_of[#l_mandatory_t] <= #xn_of[#l_active_t]$ (since then it is $<=$ capacity, but we derived earlier it must be $>$).
 
   We can show this by proving that #l_mandatory_t is a sublist of #l_active_t (a sublist means every element in the left list occurs less often than in the right list). For this, it is enough that #l_mandatory_t has no duplicates and that every element is in #l_active_t. The fact it has no duplicates comes from the fact it is the result of a filter (which only removes values) and a map (which preserves the variable) of #bounds, which we know is unique (every variable occurs only once). Next, since #bounds are valid, we know every bound is associated with in activity in $C$, and when an activity is mandatory, it is certainly active (if the bounds are correct, which we know they are since #bounds is valid). Therefore, every element in #l_mandatory_t is also in #l_active_t.
@@ -1919,7 +1947,7 @@ The specification requires that the result of the profile, if it does not report
 
 We now have the tools to prove @thm:cumulcheck.
 
-#proof([of @thm:cumulcheck])[
+#proof(of: <thm:cumulcheck>)[
   The checker returns `true`, therefore, #inferbounds cannot have reported that $omega$ is inconsistent. This means we have #bounds, #maybebound, and we can apply @lem:inferred_cumulative_bounds_spec. Our goal is then, with #bounds, #maybebound being valid for $A$ and $C$ as assumptions, to derive a contradiction.
   
   We claim we are either in one of two cases:
@@ -2303,10 +2331,198 @@ Our work is a significant step towards achieving a formally verified CP proof ch
 We see multiple avenues to further improve our work. First of all, our proposed methodology could be improved by developing guidance for the formal verification of checkers for conflict types. This would significantly advance our goal of how to develop _formally verified_ proof step checkers. Next, multiple performance improvements are possible, in particular for cumulative by not considering all timepoints and for alldifferent by computing the domain union more efficiently. Adding support for new constraints will also advance our understanding of inference checking by providing additional examples and testing our methodology. Finally, a large conceptual improvement to inference checking could be made by investigating support for richer _hints_ to the proof system. These hints can tell the inference checkers "where to look". In the case of cumulative this would be especially helpful for conflict inferences, providing significant speedups.
 
 
+
+
 #pagebreak(weak: true)
 
 #ams-biblio(bibliography: bibliography("bib.yml"))
 
 #pagebreak(weak: true)
 
-#nonumber[= Appendix]
+#nonumber[
+  = Appendix
+]
+
+//#set heading(numbering: "A.")
+
+#set heading(supplement: [Appendix], numbering: (..nums) => {
+  numbering("A", ..nums.pos().slice(1))
+})
+
+#counter(heading).update(0)
+
+#let desccounter = rich-counter(
+  identifier: "descs",
+  inherited_levels: 2
+)
+
+#let mycodedesc(type) = {
+  mathblock(
+    blocktitle: type,
+    counter: desccounter,
+    fill: greyl,
+    inset: (x: 1em, y: 0.8em),
+    radius: 0em,
+    numbering: (..nums) => {
+      numbering("A.1", ..nums.pos().slice(1))
+    },
+    prefix: (count) => {
+      [*#type #count*:]
+    },
+    titlix: (title) => [\ #title],
+    bodyfmt: text.with(size: codeblocksize)
+  )
+}
+
+
+#let fundlink(label_name, name) = {
+  let pseudo_nmbr = context {
+    let label_el = query(label_name).first()
+    let head_ctr = (desccounter.at)(label_name)
+    let label_ctr = label_el.counter.display()
+    let head_ctr_p1 = (head_ctr.at(1), head_ctr.at(2) + 1)
+    [(#label_el.supplement #numbering("A.1", ..head_ctr_p1))]
+  }
+  [#metadata(("funlink", jmono(name), pseudo_nmbr))#label("fund:" + name)]
+}
+
+#let fundesc = mycodedesc("Function Description")
+#let pseudocode = mycodedesc("Pseudocode")
+
+
+== Pseudocode <appendix:pseudocode>
+
+#nonumber[=== Language]
+
+Our pseudocode closely follows Python's syntax, but borrows some concepts from Rocq where appropriate. We have four types of declaration, which mostly follow Rocq: 
+- `Definition` for functions
+- `Recursive` for recursive function (`Fixpoint` in Rocq)
+- `Record` for product types (classes/structs)
+- `Inductive` for sum types (unions/enums)
+
+We use a number of polymorphic/generic types, using Python's syntax for generics, i.e., `List[E]` indicates a `List` of type `E`.
+- `List`, for lists similar to Rocq's lists, which can be prended using the syntax `a :: nil`, where `nil` is the empty list.
+- `Set`, for sets without duplicate elements, assumed to have at worst logarithmic time complexity for addition and deletion operations. We use the `MSet` interface, using `MSetRBT` as the implementation, both from the Rocq standard library.
+- `Option[E]`, which can either be `None` or a value of type `E` wrapped in `Some`.
+
+We allow for anonymous product types (tuples), where we use the `*` syntax (as in Rocq) to indicate a tuple. For example, `X * Y` is the type of pairs of elements, where the first is of type `X` and the second of type `Y`. Similarly, we use the `|` syntax (as in Python) for anonymous sum types (in practice, there would need to be some way to always distinguish elements, but as this is pseudocode we need not worry about this). 
+
+Our pseudocode language allows matching on inductive types, using a syntax similar to Python, where we match on some variable and then list the different cases. This allows, for example, to distinguish an empty list from a non-empty one and bind the head of the list to a variable (see e.g. @fun:deduct_check_inferences). 
+
+Our pseudocode language also allows currying (like Rocq). Therefore, given a function `f` with three arguments, `f(a, b)` returns a function with one argument (the third one).
+
+We now list the primary data types that we have already defined mathematically.
+
+
+#pseudocode(title: [Primary data types.])[
+  ```tiplang2
+  Inductive AtomicComparator:
+    case less_equal
+    case greater_equal
+    case equal
+    case not_equal
+
+  Record Atomic:
+    constant: Z
+    comparator: AtomicComparator
+
+  Record PerforatedInterval:
+    lb: Zext
+    ub: Zext
+    holes: Set[Z]
+
+  Record BoundAtomic:
+    var: Id
+    atomic: Atomic
+
+  Record ProofFact:
+    premises: list[BoundAtomic]
+    consequent: list[BoundAtomic]
+  ```
+]
+
+The last thing we mention is that for record types, we assume the existence of functions that map records to their members (similar to how records work in Rocq). So for a variable #dom of type `PerforatedInterval`, we have that ```tiplang2 lb(dom)``` is the lower bound of #dom (and therefore of type `Zext`).
+
+#nonumber[=== Descriptions]
+
+We list some additional descriptions of some elementary functions used in the pseudocode in this work.
+
+#fundlink(<desc:is_element_of>, "is_element_of")
+#fundesc(title: [Returns whether `element` is an element of `set`. `E` is a generic element type.])[
+  ```tiplang2
+  Definition is_element_of(element: E, set: Set[E]) -> bool:
+  ```
+] <desc:is_element_of>
+
+#fundlink(<desc:filter_greater_eq>, "filter_greater_eq")
+#fundesc(title: [Returns a list of the elements of `l` values greater than or equal to `lower`, without changing the order.])[
+  ```tiplang2
+  Definition filter_greater_eq(l: List[Z], lower: Z) -> List[Z]:
+  ```
+] <desc:filter_greater_eq>
+
+#fundlink(<desc:atomics_for_var>, "atomics_for_var")
+#fundesc(title: [Returns only the atomics in `atomics` that are associated with `var`.])[
+  ```tiplang2
+  Definition atomics_for_var(var: Id, atomics: List[BoundAtomic]) -> List[Atomic]:
+  ```
+] <desc:atomics_for_var>
+
+#fundlink(<desc:negate_bound_atomic>, "negate_bound_atomic")
+#fundesc(title: [Negates the constraint in `atomic` such that the domain induced by the negated atomic is exactly the complement of the domain induced by the original atomic. For example, $[x <= c]$ becomes $[x >= c + 1]$.])[
+  ```tiplang2
+  Definition negate_bound_atomic(atomic: BoundAtomic) -> BoundAtomic:
+  ```
+] <desc:negate_bound_atomic>
+
+#fundlink(<desc:all_premises_hold>, "all_premises_hold")
+#fundesc(title: [Returns #ttrue if for every atomic constraint $[x diamond.small c]$ in #atomics, we have that @fun:check_holds($D(x), [diamond.small c]$) = #ttrue, and #ffalse otherwise.])[
+  ```tiplang2
+  Definition all_premises_hold(atomics: List[BoundAtomic], D: Domains) -> bool:
+  ```
+] <desc:all_premises_hold>
+
+#fundlink(<desc:union_sets>, "union_sets")
+#fundesc(title: [Takes the union of all sets in `sets` and returns it as a single set. `E` is generic element type.])[
+  ```tiplang2
+  Definition union_sets(sets: list[Set[E]]) -> Set[E]:
+  ```
+] <desc:union_sets>
+
+#fundlink(<desc:cardinal>, "cardinal")
+#fundesc(title: [Returns the number of distinct elements in the the set `s`.])[
+  ```tiplang2
+  Definition cardinal(s: Set[E]) -> N:
+  ```
+] <desc:cardinal>
+
+
+
+#fundlink(<desc:filter_mandatory>, "filter_mandatory")
+#fundesc(title: [
+    Given a list of `BoundedActivity`, returns only those activities that are mandatory at `t`, by computing for each activity #spro[act] whether `upper(act) <= t < lower(act) + duration(act). `
+  ])[
+  ```tiplang2
+  Definition filter_mandatory(
+    t: Z, 
+    bounded_activities: List[BoundedActivity]
+  ) -> List[BoundedActivity]:
+  ```
+] <desc:filter_mandatory>
+
+#fundlink(<desc:n_sum>, "n_sum")
+#fundesc(title: [
+    Returns the sum of all numbers in `l`.
+  ])[
+  ```tiplang2
+  Definition n_sum(l: List[N]) -> N:
+  ```
+] <desc:n_sum>
+
+#fundlink(<desc:map_valid>, "map_valid")
+#fundesc(title: [
+    Returns `None` if for any element `a` of `l`, `f(a) = None`. Otherwise, it returns the unwrapped results of mapping each `a` according to `f` (possible since `f(a)` returns an element of type `B` wrapped in `Some` for all `a`), wrapped in `Some`.])[
+  ```tiplang2
+  Definition map_valid(f: A->Option[B], l: List[A]) -> Option[List[B]]:
+  ```
+] <desc:map_valid>
