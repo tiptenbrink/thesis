@@ -5,7 +5,7 @@
 
 #import "@preview/great-theorems:0.1.2": *
 #import "@preview/rich-counters:0.2.2": *
-
+#import "@preview/cetz:0.4.1": canvas, draw
 
 
 #show: ams-article.with(
@@ -212,8 +212,8 @@
   )
 }
 
-#todo[remove!]
-#show link: text.with(fill: blue)
+
+//#show link: text.with(fill: blue)
 
 // ```
 // Planning:
@@ -275,15 +275,45 @@
 
 // #note[below begins the actual introduction]
 
-Constraint Programming (CP) solvers are complex pieces of software. Their complexity is twofold: performance matters, so they are heavily engineered to solve problems as fast as possible. Furthermore, there is an inherent complexity to the algorithms and theoretical techniques used to find solutions, which have been developed over many years. Consequently, they have a large surface area for bugs. When these cause crashes or other observable misbehavior, this provides a signal that there are issues. If it does find a solution, even when there is some unknown bug, this is also not as problematic. This is because a solution can be checked to ensure it satisfies all constraints. The nefarious case is when the solver declares no solution exists, i.e., that the problem is unsatisfiable. How can we check that this is indeed the case? How do we know the solver did not miss some part of the search space due to some unknown bug? One avenue is to prove the solver's completeness @carlier2012certified, which would ensure that if a solution exists, it would find it. However, this is challenging, in particular without sacrificing performance. Instead, the solver can record the steps it took to determine the unsatisfiability of a particular instance, producing a proof of unsatisfiability. This proof can then be verified by a program that is more trusted than the solver. This approach, known as proof logging, has already seen great success. This success began with SAT solvers (see Biere et al. @biere2021handbook, Ch. 15 for a detailed overview), where nearly every modern solver that participates in competitions now produces proofs. In fact, it is now mandatory to participate in competitions @sat2013.
+Constraint Programming (CP) solvers are complex pieces of software. Their complexity is twofold: performance matters, so they are heavily engineered to solve problems as fast as possible. Furthermore, there is an inherent complexity to the algorithms and theoretical techniques used to find solutions, which have been developed over many years. Consequently, they have a large surface area for bugs. 
 
-This success has only recently been extended to CP solvers. Flippo et al. @flippo2024proof have shown that a modern LCG (lazy clause generation, @feydy2009rengineered) solver can be instrumented to produce unsatisfiability proofs in a format inspired by the DRUP format @goldberg2003unsatcnf @gelder2008rup in SAT. However, while producing such proofs has now been demonstrated, verifying them remains a challenge. In the work of Flippo et al., in order to be verified, the CP problem proof had to be encoded in a pseudo-Boolean model @gocht2022auditable. Among the main strengths of CP is the ability to efficiently encode the problem with constraints that retain much of the problem's structure. Encoding this in a pseudo-Boolean model loses much of this. Furthermore, the CP proof can mention the constraint-specific reasoning that solvers employ in order to prune the search space more efficiently. When encoding into a format that does not know about these types of reasoning, verification can also not make use of this specialized reasoning.
+When these bugs cause crashes or other observable misbehavior, this provides a signal that there are issues. If it does find a solution, even when there is some unknown bug, this is also not as problematic. This is because a solution can be checked to ensure it satisfies all constraints. 
 
-This has led to a collaborative effort, of which this work is a part, to verify a CP proof using the strengths of CP, which means developing a CP proof checker that can perform specialized reasoning over particular constraints. This requires explicitly supporting these constraints in the checker. This entirely removes the encoding step, but requires more complicated verification algorithms. This verification must be trusted to a higher degree than the solver, as otherwise the conclusion can still be questioned. Therefore, the checker can be formally verified, achieving the highest possible level of trust in its correctness. We note that in the case of pseudo-Boolean proofs, the verification is straightforward enough that this is not an absolute requirement.
+The nefarious case is when the solver declares no solution exists, i.e., that the problem is unsatisfiable. How can we check that this is indeed the case? How do we know the solver did not miss some part of the search space due to some unknown bug? 
 
-To create a formally verified CP checker, a new proof system @sidorov2025checker was developed that better captures the integer reasoning performed by CP solvers and does not require re-encoding the problem. Proofs are sequences of proof steps. The final conclusion requires that each individual proof step is valid, in addition to the reasoning that actually extracts this final conclusion from these valid proof steps. A natural question is then to focus on the individual proof steps and ask: _How can we develop formally verified checkers for individual proof steps in a CP unsatisfiability proof checker_? Our contribution is then to determine how to check these individual steps using formally verified algorithms, leaving the overall checker to the wider collaboration.
+One avenue is to prove the solver's completeness @carlier2012certified, which would ensure that if a solution exists, it would find it. However, this is challenging, in particular without sacrificing performance. Instead, the solver can record the steps it took to determine the unsatisfiability of a particular instance, producing a proof of unsatisfiability. This proof can then be verified by a program that is more trusted than the solver. This approach, known as proof logging, has already seen great success. 
 
-In the proof system of Sidorov et al. @sidorov2025checker, there are two types of proof steps: inferences, which involve reasoning over particular constraints, and deductions, which combine information of multiple inferences to deduce new facts. We also separate inferences into two types: inferences that correspond to a particular type of CP propagation algorithm, and inferences that are more general-purpose. The latter case includes inferences that rewrite previously deduced facts as well as inferences that bring a variable's initial domain into the context. This work only focuses on the first category, i.e., propagator inferences. The other category was handled by the wider effort this work is a part of. As there are many different CP constraints, often with multiple propagation algorithms, each with their own specialized reasoning, verifying these propagator inferences requires developing many inference checking algorithms. Therefore, we cannot hope to develop verification algorithms for every constraint and propagator in this work. Instead, we restrict ourselves to two popular constraints, alldifferent and (timetable) cumulative. Furthermore, we develop a general methodology that can be applied to other constraints to ease the development and allow the checker to be extended in the future. For the deduction step, however, we do not develop a general methodology, as it is independent of the constraint type and is fully general. Instead, we simply present its implementation and formalization. Furthermore, we introduce a theory and formalization of perforated intervals, which is pivotal in the implementation and formalization of both inference and deduction checking. Perforated intervals are a representation of (potentially infinite) subsets of $ZZ$, which are used to describe variable domains. They consist of (optional) bounds and a set of holes. We describe the operations that can be performed on perforated intervals and under what conditions these can be performed efficiently. These operations and properties are all formally verified. Finally, we present some findings of working with Rocq, which is the interactive theorem prover and programming language used for the implementation of the checker.
+The success of proof logging began with SAT solvers (see Biere et al. @biere2021handbook, Ch. 15 for a detailed overview), where nearly every modern solver that participates in competitions now produces proofs. In fact, it is now mandatory to participate in competitions @sat2013.
+
+This success has only recently been extended to CP solvers. Flippo et al. @flippo2024proof have shown that a modern LCG (lazy clause generation, @feydy2009rengineered) solver can be instrumented to produce unsatisfiability proofs in a format inspired by the DRUP format @goldberg2003unsatcnf @gelder2008rup in SAT. 
+
+One of the great strengths of CP is its support for a wide range of constraints, including so-called global constraints that can exploit a problem's global structure. CP solvers generally support using constraint-specific reasoning to reduce the search space. Ideally, this same reasoning should be able to be verified by a CP-native checker.
+
+Instead, previous work has mostly followed the approach of encoding CP problems as simpler problems, such as SAT @veksler2010CSPprof. In the work of Flippo et al., proofs produced by the solver were translated to pseudo-Boolean proofs and verified by a pseudo-Boolean checker @gocht2022auditable. A CP-native checker, which understands the specialized reasoning performed by solvers, does not have to translate CP reasoning into more limited types of reasoning. 
+
+// Among the main strengths of CP is the ability to efficiently encode the problem with constraints that retain much of the problem's structure. Encoding this in a pseudo-Boolean model loses much of this. Furthermore, the CP proof can mention the constraint-specific reasoning that solvers employ in order to prune the search space more efficiently. When encoding into a format that does not know about these types of reasoning, verification can also not make use of this specialized reasoning.
+
+This has led to a project to develop a formal CP proof system and proof checker, of which this work is a part. To verify proofs using specialized reasoning, this reasoning must be explicitly supported in the checker. This entirely removes the encoding step, but requires more complicated verification algorithms. This verification must be trusted to a higher degree than the solver, as otherwise the conclusion can still be questioned. Therefore, the checker can be formally verified, achieving the highest possible level of trust in its correctness. We note that in the case of pseudo-Boolean proofs, the verification is straightforward enough that this is not an absolute requirement.
+
+To create a formally verified CP checker, a new proof system @sidorov2025checker was developed that better captures the integer reasoning performed by CP solvers and does not require re-encoding the problem. Proofs are sequences of proof steps. The final conclusion requires that each individual proof step is valid, in addition to the reasoning that actually extracts this final conclusion from these valid proof steps. Furthermore, the checker will need to store the facts it has previously derived so they can be used in future steps. 
+
+A natural question is then to disregard the global design of the checker and focus on the individual proof steps, and ask: _How can we develop formally verified checkers for individual proof steps in a CP unsatisfiability proof checker_? Our contribution is then to determine how to check these individual steps using formally verified algorithms, leaving the overall checker to the broader CP proof checker project.
+
+CP solvers perform propagations, where they reason over constraints to shrink the search space, and search, which actually explores the search space and makes more propagation possible. A CP proof must capture both propagation and search. It therefore contains two types of steps:
+- _inferences_: which capture a particular type of reasoning performed by the solver.
+- _deductions_: which combine different facts into new facts.
+
+The proof system of Sidorov et al. @sidorov2025checker has exactly these two types of steps. We can further separate inferences into two types: inferences that correspond to a particular type of CP propagation algorithm (propagator inferences), and inferences that are more general-purpose. The latter case includes inferences that rewrite previously deduced facts as well as inferences that bring a variable's initial domain into the context. This work only focuses on the first category, i.e., propagator inferences. 
+
+As there are many different CP constraints, often with multiple propagation algorithms, each with its own specialized reasoning, verifying these propagator inferences requires developing many inference checking algorithms. Therefore, we cannot hope to develop verification algorithms for every constraint and propagator in this work. 
+
+Instead, we restrict ourselves to two popular constraints, alldifferent and (timetable) cumulative. Furthermore, we develop a general methodology that can be applied to other constraints to ease the development and allow the checker to be extended in the future. 
+
+For the deduction step, however, we do not develop a general methodology, as it is independent of the constraint type and is fully general. Instead, we simply present its implementation and formalization. 
+
+Furthermore, we introduce a theory and formalization of perforated intervals, which is pivotal in the implementation and formalization of both inference and deduction checking. Perforated intervals are a representation of (potentially infinite) subsets of $ZZ$, which are used to describe variable domains. They consist of (optional) bounds and a set of holes. We describe the operations that can be performed on perforated intervals and under what conditions these can be performed efficiently. These operations and properties are all formally verified. 
+
+Finally, we present some findings of working with Rocq, which is the interactive theorem prover and programming language used for the implementation of the checker.
 
 // This work is part of a larger program that seeks to improve the reliability of CP solvers. Previous work addressed this with an approach to produce proofs of unsatisfiability and an initial proof format that could be encoded as a pseudo-Boolean proof. More specifically, this work is part of a follow-up effort that wants to improve the problems with that approach by developing a formally verified CP unsatisfiability proof checker. The question then becomes, how can we develop this checker and how do we improve the proof format to make use of native CP reasoning? Concurrently to our contributions and as part of the larger effort, this improved format and the overall structure of the checker were developed. 
 
@@ -293,7 +323,19 @@ In the proof system of Sidorov et al. @sidorov2025checker, there are two types o
 
 // and propagators and the checker must be able to replicate the reasoning performed by these constraints and propagators. This requires explicitly supporting them in the checker. The checker is more reliable than the solver not just because it is simpler, as e.g. it does not have to do search, but also because it is formally verified in Roqc (formerly Coq). That is why we call what the checker does _proof certification_.
 
-We now describe the structure of this thesis. First, in @sec:background we present the background necessary for understanding our approach and results. This includes a description of the proof system and checker used in this thesis, which are being developed concurrently to do this thesis by Sidorov et al. @sidorov2025checker. We then describe our general approach in @sec:approach. In particular, we describe the difference between handling deductions and propagator inferences and exactly which proof steps are considered in this work. Then we describe our contribution in 6 top-level sections: *@sec:methodology)* methodology for developing formally verified propagator inference checking algorithms; *@sec:perfint)* the formalization and implementation of a theory for converting atomic constraints into a holes-based domain representation (termed perforated intervals). This is foundational to all the other results in this thesis; *@sec:deduct)* the implementation and formalization of the fact deduction procedure (@proc:deduct), which also discusses maps of variable domains; *@check:alldiff)* an alldifferent checker capable of verifying inferences for alldifferent constraints where the premises are without redundancy; *@check:cumul)* a checker capable of verifying inferences for cumulative constraints that are derived using timetable reasoning; *@sec:rocq)* general findings for working in Rocq in the context of constraint programming. Having described our results, we discuss them in @sec:discussion.
+We now describe the structure of this thesis. 
+- First, in @sec:background we present the background necessary for understanding our approach and results. This includes a description of the proof system and checker used in this thesis, which are being developed concurrently to do this thesis by Sidorov et al. @sidorov2025checker.
+- Next, we describe related work in @sec:relatedwork.
+- We then describe our general approach in @sec:approach. In particular, we describe the difference between handling deductions and propagator inferences and exactly which proof steps are considered in this work. 
+Then we describe our contribution in 6 top-level sections: 
+- *@sec:methodology)* methodology for developing formally verified propagator inference checking algorithms;
+- *@sec:perfint)* the formalization and implementation of a theory for converting atomic constraints into a holes-based domain representation (termed perforated intervals). This is foundational to all the other results in this thesis
+- *@sec:deduct)* the implementation and formalization of the fact deduction procedure (@proc:deduct), which also discusses maps of variable domains
+- *@check:alldiff)* an alldifferent checker capable of verifying inferences for alldifferent constraints where the premises are without redundancy
+- *@check:cumul)* a checker capable of verifying inferences for cumulative constraints that are derived using timetable reasoning; 
+- *@sec:rocq)* general findings for working in Rocq in the context of constraint programming. 
+
+Having described our results, we discuss them in @sec:discussion, followed by an extended summary in @sec:conclusion.
 // #todosm[also describe impl consider?]
 // Furthermore, point 3 and 4 will also describe building blocks that are useful beyond just the alldifferent and cumulative constraints. Section 1-4 will also have an "implementation considerations" subsection that are specific to the implementation in Rocq. Their main part will not require any knowledge of Rocq.
 
@@ -573,29 +615,119 @@ While for alldifferent there exists a polynomial time algorithm that decides uns
     
     [$b$], [1], [3], [0], [1],
   
-    [$c$], [2], [2], [2], [3],
+    [$c$], [2], [3], [2], [3],
     ),
     caption: [Activity parameters],
   ) <ex:cum:params>
 
-  For activities $a$, $b$, and $c$, there are certain times where they are certainly active, their so-called mandatory parts (see @sec:timetable for more details). Consider activity $a$. It starts at either $t = 0$ or $t = 1$. In either case, because its duration is 2, it is active at $t = 1$. Using similar reasoning for the other activities, we can create the following "resource profile", shown in @img:cum:timeline. A square is colored if an activity is certainly active at that time. The height is equal to the activity's usage.
+  For activities $a$, $b$, and $c$, there are certain times where they are certainly active, their so-called mandatory parts (see @sec:timetable for more details). Consider activity $a$. It starts at either $t = 0$ or $t = 1$. In either case, because its duration is 2, it is active at $t = 1$. Using similar reasoning for the other activities, we can create the following "resource profile", shown in @img:cum:timeline. A square is brightly colored if an activity is certainly active at that time and transparent if it could maybe be active. The height is equal to the activity's usage. We also label the constraint's capacity, which is 2.
 
   #figure(
-    image("placeholder.png", width: 40%),
-    caption: [#todo[timeline that shows mandatory parts for above example]],
-  ) <img:cum:timeline>
+  canvas(length: 1cm, {
+    import draw: *
+    
+    // Set up coordinate system
+    let time-scale = 1.2
+    let usage-scale = 0.8
+    
+    // Draw time axis
+    line((0, 0), (7 * time-scale, 0), stroke: 1pt + black)
+    
+    // Draw usage axis  
+    line((0, 0), (0, 4 * usage-scale), stroke: 1pt + black)
+    
+    // Time axis labels
+    for t in range(8) {
+      content((t * time-scale, -0.3), text(size: 10pt, str(t)))
+      line((t * time-scale, -0.1), (t * time-scale, 0.1), stroke: 0.5pt + black)
+    }
+    
+    // Usage axis labels
+    for u in range(1, 4) {
+      content((-0.3, u * usage-scale), text(size: 10pt, str(u)))
+      line((-0.1, u * usage-scale), (0.1, u * usage-scale), stroke: 0.5pt + black)
+    }
+    
+    // Axis labels
+    content((3 * time-scale, -0.8), text(size: 12pt, [Time $t$]))
+    content((-0.8, 2 * usage-scale), text(size: 12pt, [Usage]), angle: 90deg)
+    
+    // Activity ranges and mandatory parts
+    // Activity a: bounds [0,1], duration 2 → possible at t=0,1,2; mandatory at t=1
+    // Activity b: bounds [0,1], duration 3 → possible at t=0,1,2,3; mandatory at t=1,2  
+    // Activity c: bounds [2,3], duration 2 → possible at t=2,3,4; mandatory at t=3
+    
+    let activities = (
+      (name: "a", possible: (0, 1, 2), mandatory: (1,), color: red, usage: 1),
+      (name: "b", possible: (0, 1, 2, 3), mandatory: (1, 2), color: blue, usage: 1),  
+      (name: "c", possible: (2, 3, 4, 5), mandatory: (3, 4), color: green, usage: 2),
+    )
+    
+    // Draw possible ranges (greyed out)
+    for activity in activities {
+      for t in activity.possible {
+        if t <= 6 {  // Restrict to t=0 to t=7 range
+          let y-offset = if activity.name == "a" { 1 } else if activity.name == "b" { 0 } else { 0 }
+          let height = activity.usage
+          
+          rect(
+            (t * time-scale, y-offset * usage-scale), 
+            ((t + 1) * time-scale, (y-offset + height) * usage-scale),
+            fill: activity.color.lighten(70%).transparentize(30%), 
+            stroke: 0.5pt + activity.color.lighten(50%)
+          )
+        }
+      }
+    }
 
-  Based on this profile, we see that $x$ cannot start at $t = 0$, as then for $t = 1$ the capacity would be exceeded. Similarly, for all times up to $t = 4$. Only at $t = 5$ is there no violation. Therefore, we can propagate $[x >= 5]$ (where we use $x$ to also refer to the start time variable). We can represent this propagation with the following fact:
+    // Purple where red and green overlay
+    rect(
+        (2 * time-scale, 1 * usage-scale), 
+        ((2 + 1) * time-scale, (1 + 1) * usage-scale),
+        fill: yellow.lighten(70%).transparentize(30%), 
+        stroke: 0.5pt + yellow.lighten(50%)
+      )
+    
+    // Draw mandatory parts (highlighted)
+    for activity in activities {
+      for t in activity.mandatory {
+        if t <= 6 {
+          let y-offset = if activity.name == "a" { 1 } else if activity.name == "b" { 0 } else { 0 }
+          let height = activity.usage
+          
+          rect(
+            (t * time-scale, y-offset * usage-scale), 
+            ((t + 1) * time-scale, (y-offset + height) * usage-scale),
+            fill: activity.color.lighten(20%), 
+            stroke: 2pt + activity.color.darken(30%)
+          )
+          
+          content(
+            (t * time-scale + 0.6, (y-offset + height/2) * usage-scale), 
+            text(size: 9pt, weight: "bold", fill: white, activity.name)
+          )
+        }
+      }
+    }
+    
+    // Add capacity line (assuming capacity = 3)
+    line((0, 2 * usage-scale), (7 * time-scale, 2 * usage-scale), 
+         stroke: (paint: gray, dash: "dashed", thickness: 1pt))
+
+    content((7.6 * time-scale, 2 * usage-scale), text(size: 9pt, [Capacity]))
+  }),
+  caption: [Timeline showing activities $a, b, c$. Brightly colored blocks indicate when activities are certainly active no matter when they are scheduled. Lightly colored areas indicate when an activity could maybe be active.]
+) <img:cum:timeline>
+
+  Based on this figure, we see that $x$ cannot start at $t = 0$, as then for $t = 1$ the capacity would be exceeded. Similarly, for all times up to $t = 4$. Only at $t = 5$ is there no violation. Therefore, we can propagate $[x >= 5]$ (where we use $x$ to also refer to the start time variable). We can represent this propagation with the following fact:
 
   #numbered[
     $ [a >= 0] and [a <= 1] and [b >= 0] and [b <= 1] and [c >= 2] and [c <= 5] and [x >= 0] arrow [x >= 5] $ <eq:cum:fact>
-  ] 
+  ]
 
   The above reasoning is known as timetable reasoning.
   
-  // Consider a situation with a cooktop with two heating elements, as well as a number of ingredients that must be cooked on a stove. Therefore, only two ingredients can be cooked at the same time time. Furthermore, each ingredient takes a specific amount of time to cook. The processing times will be measured in increments of 5 minutes. We have the following ingredients: _potatoes_ ($P$) _vegaburger_ ($V$) and _broccoli_ ($B$), as well as two garnishes, _onion_ ($O$) and _garlic_ ($G$). This gives us a cumulative constraint where $A = {P, V, B, O, G}$, $p(P) = 3$, $p(V) = 2$, $p(B) = 1$, $p(O) = 1$, $p(G) = 1$ and $R = 2$.
 ] <ex:cum>
-
 
 
 Since we cannot hope for efficient propagation algorithms that achieve any standard form of local consistency, instead we can look at some propagation algorithms for cumulative that achieve weaker filtering. One of the most important cumulative propagation algorithms is _timetable_, which has $O(n^2)$ @letort2012scalesweep and $O(n log n)$ @ouellet2013cumulative implementations. However, it has rather weak propagation strength. One of the strongest practical propagation algorithms is _energetic reasoning_ @erschler1990energy @baptiste1999satcumul. We also refer to @schutt2011improving for a treatment of cumulative in learning CP solvers. However, it suffers from a high time complexity, $O(n^3)$. Consequently, it is not implemented in many modern solvers. We therefore focus on timetable propagation here, as it has been the most successful in practice. 
@@ -608,7 +740,97 @@ As with alldifferent, to verify propagation outputs such as @eq:cum:fact we must
 
 === Timetable propagation <sec:timetable>
 
-Given an activity $x$ with processing time $duration(x)$ and starting time variable $start(x)$ with domain $[lower(x), upper(x)]$, then for times $t$ s.t. $upper(x) <= t < lower(x) + duration(x)$ we know that $x$ is active. This can be derived by observing that an activity is active at times $start(x) <= t < start(x) + duration(x)$ and then using the bounds. We say that for such $t$, $x$ is _mandatory_ (also known as _compulsory_). We also define the _resource profile_, which for each time $t$ is defined as the sum of the usages of all activities that are mandatory at that time. 
+Given an activity $x$ with processing time $duration(x)$ and starting time variable $start(x)$ with domain $[lower(x), upper(x)]$, then for times $t$ s.t. $upper(x) <= t < lower(x) + duration(x)$ we know that $x$ is active. This can be derived by observing that an activity is active at times $start(x) <= t < start(x) + duration(x)$ and then using the bounds. We say that for such $t$, $x$ is _mandatory_ (also known as _compulsory_).For a visual representation, see @fig:mandpart. We also define the _resource profile_, which for each time $t$ is defined as the sum of the usages of all activities that are mandatory at that time. 
+
+#figure(
+  canvas(length: 1cm, {
+    import draw: *
+    
+    // Example activity parameters - larger mandatory part
+    let lower-bound = 1  // Earliest start time
+    let upper-bound = 4  // Latest start time  
+    let duration = 5
+    let est = lower-bound
+    let lst = upper-bound
+    let ect = est + duration  // 1 + 5 = 6
+    let lct = lst + duration  // 4 + 5 = 9
+    
+    let time-scale = 1.0
+    let bar-height = 0.7
+    let y-center = 0.7
+    
+    // Draw time axis
+    line((0, 0), (10 * time-scale, 0), stroke: 1pt + black)
+    
+    // Time axis labels and ticks
+    for t in range(11) {
+      content((t * time-scale, -0.3), text(size: 10pt, str(t)))
+      line((t * time-scale, -0.1), (t * time-scale, 0.1), stroke: 0.5pt + black)
+    }
+    
+    // Time axis label
+    content((5 * time-scale, -0.8), text(size: 12pt, [Time $t$]))
+    
+    // Draw possible execution range (light bar)
+    rect(
+      (est * time-scale, y-center - bar-height/2), 
+      (lct * time-scale, y-center + bar-height/2),
+      fill: blue.lighten(80%), 
+      stroke: 1pt + blue.lighten(40%)
+    )
+    
+    // Draw mandatory part (darker shaded area) - ensure it's inside the possible window
+    rect(
+      (lst * time-scale, y-center - bar-height/2), 
+      (ect * time-scale, y-center + bar-height/2),
+      fill: blue.lighten(30%), 
+      stroke: 1.5pt + blue.darken(30%)
+    )
+
+    let ts_y = 1.6
+    
+    // Add vertical lines for key times - extend through the execution window
+    // EST line
+    line((est * time-scale, 0), (est * time-scale, y-center + 0.7), 
+         stroke: (paint: green.darken(20%), thickness: 1.5pt, dash: "dashed"))
+    content((est * time-scale, ts_y), text(size: 9pt, [EST], fill: green.darken(20%)))
+    
+    // LST line  
+    line((lst * time-scale, 0), (lst * time-scale, y-center + 0.7), 
+         stroke: (paint: red.darken(20%), thickness: 1.5pt, dash: "dashed"))
+    content((lst * time-scale, ts_y), text(size: 9pt, [LST], fill: red.darken(20%)))
+    
+    // ECT line
+    line((ect * time-scale, 0), (ect * time-scale, y-center + 0.7), 
+         stroke: (paint: orange.darken(20%), thickness: 1.5pt, dash: "dashed"))
+    content((ect * time-scale, ts_y), text(size: 9pt, [ECT], fill: orange.darken(20%)))
+    
+    // LCT line
+    line((lct * time-scale, 0), (lct * time-scale, y-center + 0.7), 
+         stroke: (paint: purple.darken(20%), thickness: 1.5pt, dash: "dashed"))
+    content((lct * time-scale, ts_y), text(size: 9pt, [LCT], fill: purple.darken(20%)))
+    
+    // Add label for mandatory part only
+    content(((lst + ect)/2 * time-scale, y-center), text(size: 9.25pt, weight: "bold", fill: white, [Mandatory]))
+    
+    // Add arrows and annotations - moved to avoid crossing labels
+    // Duration annotation - positioned above the vertical lines
+    let duration_y = 2
+    line((est * time-scale, duration_y), (ect * time-scale, duration_y), stroke: 1pt + black)
+    line((est * time-scale, duration_y - 0.1), (est * time-scale, duration_y + 0.1), stroke: 1pt + black)
+    line((ect * time-scale, duration_y - 0.1), (ect * time-scale, duration_y + 0.1), stroke: 1pt + black)
+    content(((est + ect)/2 * time-scale, duration_y + 0.4), text(size: 9pt, [Duration = 5]))
+    
+    // Bounds annotation - positioned below time axis
+    let starts = -0.7
+    line((est * time-scale, starts), (lst * time-scale, starts), stroke: 1pt + gray)
+    line((est * time-scale, starts - 0.1), (est * time-scale, starts + 0.1), stroke: 1pt + gray)
+    line((lst * time-scale, starts - 0.1), (lst * time-scale, starts + 0.1), stroke: 1pt + gray)
+    content(((est + lst)/2 * time-scale, starts - 0.4), text(size: 9pt, [Start time bounds: [1, 4]]))
+  }),
+  caption: [Mandatory part determination for an activity of duration 5 and start time bounds $[1, 4]$: The mandatory part (dark blue) spans from LST (latest start time = start time upper bound) to ECT (earliest completion time = start time lower bound + duration), as that is when the activity is active no matter where we schedule it (within its bounds).]
+) <fig:mandpart>
+
 // Reasoning about when activities are mandatory, two types of conflict can be identified. Each respond to a feature of timetable propagators,
 Based on these concepts, we describe the basic procedure for timetable propagation in @proc:timetable. Note that more optimized versions exist, but we describe only the simplest form, which also forms the basis of our verification algorithm. In particular, a significant optimization is to not look at any individual time point, but only at the time intervals where the resource profile changes. 
 
@@ -619,11 +841,77 @@ Based on these concepts, we describe the basic procedure for timetable propagati
   + (Propagation) Note that for each $t_"start"$ and activity $a$, $a$ can start at $t_start$ if we have $P(t) >= usage(a)$ for all $t$ s.t. $t_start <= t < t_start + duration(a)$. For each activity, a single pass starting from $lower(a)$ to $upper(a)$ can propagate $a >= t'$ if for all $lower(a) <= t < t'$ we have that $a$ cannot start. Similarly, a single pass starting from $upper(a)$ and down to $lower(a)$ can propagate $a <= t'$. The fact is then of the form $D(A) -> [a <= t']$ (or $[a >= t']$ if the lower pass identified a new bound). Furthermore, it is possible for $a$ to not be able to start at any time $lower(a) <= t <= upper(a)$. Then, the fact is of the form $D(A) -> bot$. 
 ] <proc:timetable>
 
+We now apply @proc:timetable to @ex:cum, allowing us to find possible propagations in a systematic way.
+
+#example[
+   The times in @ex:cum we said some activities had to be "certainly active" correspond to their mandatory parts. In @table:mandparts we compute the mandatory parts, while in @table:resprofile we compute the resource profile from $t = 0$ to $t = 6$. From this we can also deduce that the first spot with $P(t) > 0$ where $x$ (which has duration 2) can start is indeed $t = 5$.
+
+  #figure(
+    table(
+    columns: 4,
+    stroke: (x, y) => (
+      left: if x == 1 { 1pt + black } else { none },
+      top: if y > 0 and calc.odd(y) { 1pt + black } else { none },
+      bottom: if calc.odd(y) { 1pt + black } else { none },
+      right: none,
+    ),
+    
+    // header
+    [*Activity*], [$upper$], [$lower + duration$], [mandatory part],
+  
+    // rows
+    [$x$], [10], [2], [[ ]],
+    
+    [$a$], [1], [2], [[1, 1]], 
+    
+    [$b$], [1], [3], [[1, 2]],
+  
+    [$c$], [3], [5], [[3, 4]], 
+    ),
+    caption: [Mandatory parts of activities in @ex:cum],
+  ) <table:mandparts>
+
+  #figure(
+    table(
+    columns: 4,
+    stroke: (x, y) => (
+      left: if x == 1 { 1pt + black } else { none },
+      top: if y > 0 { 1pt + black },
+      bottom: none,
+      right: none,
+    ),
+    
+    // header
+    [*Time*], [*$M(t)$*], [*usages*], [*$P(t)$*],
+  
+    // rows
+    [0], [$nothing$], [$nothing$], [2],
+    
+    [1], [${a, b}$], [${1, 1}$], [0], 
+    
+    [2], [${b}$], [${1}$], [1],
+  
+    [3], [${c}$], [${2}$], [0], 
+
+    [4], [${c}$], [${2}$], [0], 
+
+    [5], [$nothing$], [$nothing$], [2], 
+
+    [6], [$nothing$], [$nothing$], [2], 
+    ),
+    caption: [Resource profile after subtracting constraint capacity of activities in @ex:cum.],
+  ) <table:resprofile>
+] <ex:cum:sys>
+
+
+
 We have seen two different constraints and defined how we can describe the reasoning made by propagators using "facts". Furthermore, we discussed an informal strategy for verifying these facts. Before we discuss more rigorously and how these facts can be combined to construct actual unsatisfiability proofs, we look at proofs of unsatisfiability in SAT, where they are already standard. SAT can be seen as a special case of CP and ideas from SAT have also inspired the CP proof system considered in this work.
 
 // We also saw that for alldifferent we can precisely describe when there is a conflict, while for cumulative this is not possible and we instead described the propagation algorithm we seek to verify. Next, we discuss proofs of infeasibility and their relation to CP, which will serve as the necessary background to introduce the specific proof system we use.
 
 // Next, we introduce the proof system we use to write our proofs of infeasibility in and connect this to the facts we already introduced.
+
+
 
 == Proofs of infeasibility in SAT <sec:satunsat>
 
@@ -783,9 +1071,9 @@ In this work, we only develop inference steps related to propagator reasoning. T
     [4], [$top arrow [b <= 1]$], [`domain`], [$cD_"init" (b)$], 
     [5], [$top arrow [c >= 0]$], [`domain`], [$cD_"init" (c)$],
     [6], [$top arrow [z = 7]$], [`fact_equiv`], [$f_1$],
-    [7], [$[z = 7] arrow [c <= 5]$], [`fact_equiv`], [$f_2$],
-    [8], [$[a >= 0] and [a <= 1] and [b >= 0] and [b <= 1] and [c >= 0] and [c <= 5] arrow [c >= 2]$], [`alldifferent`], [$c_1$],
-    [9], [$[a >= 0] and [a <= 1] and [b >= 0] and [b <= 1] and [c >= 2] and [c <= 5] and [x >= 0] arrow [x >= 5]$], [`timetable`], [$c_2$],
+    [7], [$[z = 7] arrow [c <= 3]$], [`fact_equiv`], [$f_2$],
+    [8], [$[a >= 0] and [a <= 1] and [b >= 0] and [b <= 1] and [c >= 0] and [c <= 3] arrow [c >= 2]$], [`alldifferent`], [$c_1$],
+    [9], [$[a >= 0] and [a <= 1] and [b >= 0] and [b <= 1] and [c >= 2] and [c <= 3] and [x >= 0] arrow [x >= 5]$], [`timetable`], [$c_2$],
     [10], [$[x <= 4] and [a <= 1] arrow bot$], [`deduction`], [1, 2, 3, 4, 5, 6, 7, 8, 9]
   ), [Example of a practical deduction stage that makes use of multiple inference types.]) <proof:fullstage>
 ]
@@ -879,7 +1167,7 @@ We also define the $max$ and $min$ operations in the natural way, where we have,
 // #todo[This section will be filled mostly with what is currently in the proposal]
 #pagebreak()
 
-= Related work
+= Related work <sec:relatedwork>
 
 Unsatisfiability proofs are not standard in CP. In fact, in the 2023 and 2024 editions of the XCSP competition @audemard2023xcsp3 @audemard2024xcsp3, and the MiniZinc challenge @tack2023challengeminizinc @tack2024challengeminizinc, the only solver with support for generating proofs of infeasibility was the Pumpkin solver @pumpkin2024, which is the solver that pioneered the format and proof system used in this work @flippo2024proof @sidorov2025checker.
 
@@ -908,18 +1196,23 @@ Furthermore, VeriPB also has a formally verified back-end, known as CakePB @goch
 
 = Approach <sec:approach>
 
-
 Our main goal is to determine how to develop formally verified checkers for individual proof steps, where the proof steps are as described in @sec:proofsystem. We repeat the different proof steps here and discuss our approach for each one, highlighting the expected difficulties.
 
-*Propagator inference step*: For each possible type of reasoning (propagator + constraint combination), it is necessary to implement a checker of signature `check_inference(fact: Fact, constraint: Constraint) -> bool` and prove that it is sound. Since there are many constraints and propagators, we cannot hope to implement them all. Instead, we focus on implementing two important ones to serve as an example, using them as inspiration for the development of a general methodology for developing new propagator inference checkers. To ensure an inference checker faithfully checks a particular propagator, the checker should successfully verify every valid propagation $D -> q$ by that propagator. Rewriting propagations as $D and not q -> bot$ and determining under what conditions conflicts occur is expected to make this easier. Furthermore, as each checker only receives a fact as input, we want some procedure to convert it into a domain structure that provides more information.
+*Propagator inference step*: For each possible type of reasoning (propagator + constraint combination), it is necessary to implement a checker of signature `check_inference(fact: Fact, constraint: Constraint) -> bool` and prove that it is sound. 
 
-*Initial domain inference step*: We do not discuss this step as its implementation and formalization are not part of our contribution, but rather part of the collaborative effort. We refer to Sidorov et al. @sidorov2025checker for more details.
+Since there are many constraints and propagators, we cannot hope to implement them all. Instead, we focus on implementing two important ones to serve as an example, using them as inspiration for the development of a general methodology for developing new propagator inference checkers. 
 
-*Nogood inference step*: We do not discuss this step as its implementation and formalization are not part of our contribution, but rather part of the collaborative effort. We refer to Sidorov et al. @sidorov2025checker for more details.
+To ensure an inference checker faithfully checks a particular propagator, the checker should successfully verify every valid propagation $D -> q$ by that propagator. Rewriting propagations as $D and not q -> bot$ and determining under what conditions conflicts occur is expected to make this easier. 
+
+Furthermore, as each checker only receives a fact as input, we want some procedure to convert it into a domain structure that provides more information.
 
 *Deduction step*: The main difficulty with checking a deduction step, as we see in @proc:deduct (deduction check), comes from tracking the domains, updating them, checking whether they satisfy atomic constraints and, checking if there is a variable with an empty domain. Furthermore, as the deduction steps do not depend on any constraint-specific reasoning, there is only a single thing to implement and formally verify. Therefore, a general methodology is not required.
 
-Furthermore, we notice that both the propagator inference step and the deduction step require reasoning about domains: in particular, they require going back and forth between a richer, more efficient domain representation and atomic constraints. We therefore seek to develop building blocks that can be used both in the deduction checker and in inference checkers. Finally, we expect difficulty with the implementation, as we will have to express the checker algorithms in the language of a proof assistant, which is functional. Furthermore, our informal notions might not always translate well to rigorous formal statements.
+*Other steps*: The initial domain inference step and nogood inference step are not part of our contribution, but rather part of the CP proof checker project @sidorov2025checker.
+
+*Building blocks:* Furthermore, we notice that both the propagator inference step and the deduction step require reasoning about domains: in particular, they require going back and forth between a richer, more efficient domain representation and atomic constraints. We therefore seek to develop building blocks that can be used both in the deduction checker and in inference checkers. 
+
+*Implementation*: Finally, we expect difficulty with the implementation, as we will have to express the checker algorithms in the programming language of the Rocq prover, which is a functional language. Furthermore, our informal notions might not always translate well to rigorous formal statements.
 
 The remaining sections describe our contributions, where each separate contribution is a top-level section. 
 
@@ -927,7 +1220,9 @@ The remaining sections describe our contributions, where each separate contribut
 
 = Inference checker methodology <sec:methodology>
 
-The first major contribution we present is a methodology for developing propagator inference checkers. Before describing the general methodology, we summarize its use for developing a checker for the timetable propagator for the cumulative constraint. This should give an intuitive idea of its usefulness and the various steps. The dedicated section on this checker (@check:cumul) describes this in more detail and also contains proofs. 
+The first major contribution we present is a methodology for developing propagator inference checkers. We immediately specify that this methodology is useful only for propagators that do more than a simple conflict check or for which not much is yet known about the necessary conditions of conflicts. 
+
+Before describing the general methodology, we summarize its use for developing a checker for the timetable propagator for the cumulative constraint. This should give an intuitive idea of its usefulness and the various steps. The dedicated section on this checker (@check:cumul) describes this in more detail and also contains proofs. 
 
 #example(title: [Methodology application to cumulative])[
   Consider the cumulative timetable propagation algorithm (@proc:timetable). Let $c$ be a cumulative constraint with activities $A$. 
@@ -948,21 +1243,38 @@ Now that we have seen an example, we can introduce the general methodology, whic
   5. (*Infer domain and combine*) Combine the different conflict checkers into a single checker for the fact. Then, given a fact, convert it into a domain (where for a fact $A -> q$ we use the domain $A and not q$) and feed it to the checker.
 ] <proc:methodinf>
 
-We have successfully applied @proc:methodinf to the cumulative constraint. Furthermore, we will discuss the post-hoc application of this methodology to the checker for linear inequalities, which is not part of our contribution and was developed prior to the creation of this methodology. However, in some cases, the methodology does not actually have to be used. This is the case for the other constraint we implement a checker for: alldifferent. We will discuss that case first. We finish with a brief discussion of _conflict type_, which we believe is the most important contribution of our methodology.
-
-== Application to alldifferent
-
-In the background section on alldifferent (@sec:prelim:alldiff), we saw that there exists a powerful theorem for alldifferent that provides a necessary condition for the unsatisfiability of an alldifferent constraint (@thm:hall). Furthermore, this condition is easy to check. This means that we do not have to investigate the propagation algorithm in order to discover the different conflict types, as every conflict type is already captured by this theorem. Consequently, there is only one conflict type (an alldifferent conflict).
-
-Consequently, we did not apply the general methodology in order to develop a checker for alldifferent. Instead, we check only the necessary condition. This is described in more detail in @check:alldiff. We do mention that, if the domain materialization that we perform in our implementation proves unavoidable, it might be beneficial to develop a more specialized checker for weaker alldifferent propagators. In that case, it might be possible to still apply the methodology.
-
-== Application to linear inequalities
-
-As part of the collaborative work we are a part of, a linear inequality checker has also been developed. When we try to apply our methodology to this checker post-hoc, we see a similar problem as will alldifferent: there is only one conflict type, namely when the minimum value (based on bounds reasoning) of the left-hand side of the checker exceeds the constant on the right-hand side. Therefore, the methodology cannot really be applied; there are not enough steps in the propagation algorithm to apply it to.
+We have successfully applied @proc:methodinf to the cumulative constraint. We now discuss our notion of _conflict types_ in some more detail. This is followed by a discussion of the conditions necessary for applying this methodology to a constraint.
 
 == Conflict types <sec:infmethod:conflicttypes>
 
-For a particular propagator $p$ for constraints of type $cal(T)$, a _conflict type_ is a conflict characterized by a particular domain condition: if the domain condition is satisfied, the constraint becomes unsatisfiable. In the case of cumulative, we saw two different types: _time conflicts_ and _activity conflicts_. If a propagator performs a conflict check, the conditions it checks for are exactly the domain conditions of a conflict type. Furthermore, for every propagation $D -> q$, the domain condition $D$ combined with the condition $not q$ is the domain condition of a conflict type. It is possible for multiple types of propagations to degenerate to the same conflict type when the negated consequent is added. We saw this case for cumulative: when propagating, one must separately propagate the lower and upper bounds, but the propagations actually have the same conflict type (the activity conflict).
+For a particular propagator $p$ for constraints of type $cal(T)$, a _conflict type_ is a conflict characterized by a particular domain condition: if the domain condition is satisfied, the constraint becomes unsatisfiable. 
+
+In the case of cumulative, we saw two different types: _time conflicts_ and _activity conflicts_. If a propagator performs a conflict check, the conditions it checks for are exactly the domain conditions of a conflict type. Furthermore, for every propagation $D -> q$, the domain condition $D$ combined with the condition $not q$ is the domain condition of a conflict type. 
+
+It is possible for multiple types of propagations to degenerate to the same conflict type when the negated consequent is added. We saw this case for cumulative: when propagating, one must separately propagate the lower and upper bounds, but the propagations actually have the same conflict type (the activity conflict).
+
+// Furthermore, we will discuss the post-hoc application of this methodology to the checker for linear inequalities, which is not part of our contribution and was developed prior to the creation of this methodology. However, in some cases, the methodology does not actually have to be used. This is the case for the other constraint we implement a checker for: alldifferent. We will discuss that case first. We finish with a brief discussion of _conflict type_, which we believe is the most important contribution of our methodology.
+
+== Usage conditions
+
+This methodology does not have added value for every constraint and propagator. In particular, for another constraint we studied in detail and developed a checker for, alldifferent, there exists a powerful theorem for alldifferent that provides a necessary condition for the unsatisfiability of an alldifferent constraint (@thm:hall). 
+
+Furthermore, this condition is easy to check. This means that we do not have to investigate the propagation algorithm in order to discover the different conflict types, as every conflict type is already captured by this theorem. Consequently, there is also only one conflict type (an alldifferent conflict).
+
+As part of the CP proof checker project, a linear inequality checker has also been developed. When we try to apply our methodology to this checker, we see a similar problem as with alldifferent: there is only one conflict type, namely when the minimum value (based on bounds reasoning) of the left-hand side of the checker exceeds the constant on the right-hand side. Therefore, the methodology cannot really be applied; there are not enough steps in the propagation algorithm to apply it to.
+
+We now summarize these two cases as general cases in which this methodology is not as useful as .
+
+- If there exists a sufficient condition for the unsatisfiability of a constraint and this condition is easy to check, a checker can simply implement a check for this condition and be done.
+- If there is only one conflict type that is already captured by a conflict check in the propagation algorithm, then the checker can simply implement the conflict check and be done.
+
+// Consequently, we did not apply the general methodology in order to develop a checker for alldifferent. Instead, we check only the necessary condition. This is described in more detail in @check:alldiff. We do mention that, if the domain materialization that we perform in our implementation proves unavoidable, it might be beneficial to develop a more specialized checker for weaker alldifferent propagators. In that case, it might be possible to still apply the methodology.
+
+// == Application to linear inequalities
+
+// As part of the collaborative work we are a part of, 
+
+
 
 // The linear inequality checker implemented in the proof checker was developed before the creation of our methodology. However, we can still inspect its implementation and 
 
@@ -1775,10 +2087,10 @@ Now, let us define the two functions from the previous section in detail.
 #pseudocode(title: [Resource profile construction and time conflict checker])[```tiplang2
 Definition resource_profile_t(
   capacity: N, 
-  activity_bounds: List[ActivityBound], 
+  bounded_activities: List[BoundedActivity], 
   t: Z
 ) -> Option[N]:
-  mandatory_at_t := filter_mandatory(t, activity_bounds)
+  mandatory_at_t := filter_mandatory(t, bounded_activities)
   mandatory_usages := map(usage, mandatory_at_t)
   mandatory_usage := n_sum(mandatory_usages)
   if capacity <? mandatory_usage:
@@ -1786,52 +2098,112 @@ Definition resource_profile_t(
   else:
     return Some[capacity - mandatory_usage]
 
-Definition resource_profile(capacity: N, times: list Z, bounds: List[ActivityBound]) -> Option[List[N]]:
-  return map_valid(resource_profile_t(capacity, bounds), times)
+Definition resource_profile(
+  capacity: N, 
+  times: list Z,
+  bounded_activities: List[BoundedActivity]
+) -> Option[List[N]]:
+  return map_valid(resource_profile_t(capacity, bounded_activities), times)
 ```] <pseudo:resourceprofile>
 
-Next is 
+Next is @fun:can_schedule_activity_with_profile[l]. It works by first converting the profile given to a list of bools that correspond to whether the activity can be active at the associated time. This is done by @fun:profile_to_active_list[l]. This function assumes the first profile entry corresponds to the lower bound of the given activity, with each subsequent entry corresponding to the next timepoint. We show the pseudocode for this function and then illustrate it with an example.
 
-Given an activity $x$ and its bounds, the #jmono[cannot_schedule_activity_with_profile] works by first converting the profile given to a list of bools that correspond to whether the activity can be active at the associated time. For each profile entry (it assumes the elements correspond exactly to the times $[lower(x), lower(x) + 1, ..., upper(x)]$), it first determines whether it is mandatory at that time. If it is, the value is `true`, since it is assumed the profile was already checked and did not exceed the capacity. Otherwise, it sees if the profile value (which is the remaining amount of resources after subtracting the usage of all mandatory activities) is greater than or equal to the resource usage of the activity. If it is, then the activity can be active and the value is `true`; otherwise, it is set to `false`. The list of bools is then traversed. If it can find a set of consecutive `true` entries of length equal to the activity's processing time, the activity can be scheduled, and the function will return false. 
-
-The pseudocode can be found below. We again use the #jmono[is_mandatory] function, but also introduce the #jmono[has_n_true(n: N, l: list bool) -> bool] function, which traverses the list and returns `true` once it finds $n$ consecutive `true` values. Again, the code is somewhat simplified.
-
-#figure(
-    image("placeholder.png", width: 40%),
-    caption: [#todo[show example of the 'active list' for a particular example]],
-  ) <img:cum:activelist>
-
-#funlink(<pseudo:profile_to_active_list>, "can_schedule_activity_with_profile")
+#funlink(<pseudo:profile_to_active_list>, "profile_to_active_list")
 #pseudocode()[```tiplang2
-Definition check_can_be_active(bounded_activity: ActivityBound, usage_left: N, t: Z) -> bool:
-  return is_mandatory(t, bound) or (usage(bound) <= usage_left)
+Definition check_can_be_active(bounded_activity: BoundedActivity, usage_time: N*Z) -> bool:
+  t := fst(usage_time)
+  usage_left := snd(usage_time)
+  return is_mandatory(t, bounded_activity) or (usage(bounded_activity) <= usage_left)
 
-Definition profile_to_active_list(bound: ActivityBound, profile: List[N]) -> List[bool]:
-  profile_range := range(lower(bound), lower(bound) + length(profile))
+Definition profile_to_active_list(
+  bounded_activity: BoundedActivity, 
+  profile: List[N]
+) -> List[bool]:
+  latest_active_time := lower(bounded_activity) + length(profile) - 1
+  profile_range := range(lower(bounded_activity), latest_active_time)
   profile_with_times := combine(profile, profile_range)
-  return map(can_be_active(bound), profile_with_times)
-```]
+  return map(check_can_be_active(bounded_activity), profile_with_times)
+```] <pseudo:profile_to_active_list>
+
+#example[
+  Consider the activities from @ex:cum. We seek to verify the fact written in @eq:cum:fact. The checker sees that the consequent mentions $x$. The inferred domain when verifying this fact is $[0, 4]$ for $x$ (since we negate $[x >= 5]$). Then @fun:profile_to_active_list constructs a range (using @fund:range[l]) that represents the full window $x$ could be active, so from $t = 0$ (earliest timepoint it could be active) to $t = 4 + 2 - 1 = 5$ (the latest timepoint it could be active). It assumes it is provided with a profile over the same timepoints. From @ex:cum:sys this profile is [2, 0, 1, 0, 0, 2]. The profile and times are then combined using @fund:combine[l], forming [(0, 2), (1, 0), (2, 1), (3, 0), (4, 0), (5, 2)]. For each of these entries `check_can_be_active` uses @fund:is_mandatory[l] and whether there are enough resources left to determine whether $x$ can be active. This is shown in @table:activelist. Being mandatory is enough, since then $x$ would already be included in the computation of $P(t)$, which is always greater than 0 since otherwise the profile computation would not have succeeded.
   
+  #figure(
+    table(
+    columns: 4,
+    stroke: (x, y) => (
+      left: if x == 1 { 1pt + black } else { none },
+      top: if y > 0 { 1pt + black },
+      bottom: none,
+      right: none,
+    ),
+    
+    // header
+    [*Time*], [*@fund:is_mandatory*], [*$P(t)$*], [*Can be active?*],
+  
+    // rows
+    [0], [#ffalse], [2], [#ttrue],
+    
+    [1], [#ffalse], [0], [#ffalse],
+    
+    [2], [#ffalse], [1], [#ttrue],
+  
+    [3], [#ffalse], [0], [#ffalse],
+
+    [4], [#ffalse], [0], [#ffalse],
+
+    [5], [#ffalse], [2], [#ttrue],
+    ),
+    caption: [Computation of an active list for activity $x$ from @ex:cum.],
+  ) <table:activelist>
+]
+
+To then determine whether the activity can indeed be scheduled, @fun:can_schedule_activity_with_profile uses @fun:has_n_true[l] to check whether there is a space where the activity can be scheduled. This requires there to be a run of consecutive #ttrue values of length at least equal to the activity's duration. We now show the pseudocode, although we omit it for @fun:has_n_true as this is not central to the cumulative checker. We discuss it in more detail in @subsec:consec in the implementation considerations.
+
+#funlink(<desc:has_n_true>, "has_n_true")
+#fundesc(title: [
+    Returns #ttrue if there exist `n` consecutive #ttrue elements in `l`.
+  ])[
+  ```tiplang2
+  Definition has_n_true(n: N, l: List[bool]) -> bool:
+  ```
+] <desc:has_n_true>
+
 #funlink(<pseudo:can_schedule_activity_with_profile>, "can_schedule_activity_with_profile")
 #pseudocode[][```tiplang2
-Definition can_be_active(bound: ActivityBound, usage_left: N, t: Z) -> bool:
-  return is_mandatory(t, bound) or (usage(bound) <= usage_left)
-
-Definition profile_to_active_list(bound: ActivityBound, profile: List[N]) -> List[bool]:
-  profile_range := range_inclusive(lower(bound), lower(bound) + length(profile) - 1)
-  profile_with_times := combine(profile, profile_range)
-  return map(can_be_active(bound), profile_with_times)
-  
-Definition can_schedule_activity_with_profile(bound: ActivityBound, profile: List[N]) -> bool:
-  active_list := profile_to_active_list(bound, profile)
-  return has_n_true(duration(bound), active_list)
+Definition can_schedule_activity_with_profile(bounded_activity: BoundedActivity, profile: List[N]) -> bool:
+  active_list := profile_to_active_list(bounded_activity, profile)
+  return has_n_true(duration(bounded_activity), active_list)
 ```] <pseudo:can_schedule_activity_with_profile>
 
-Before we give the pseudocode of the main checker definition, we mention two additional functions. #jmono[cannot_schedule_activity(capacity: N, bounds: list ActivityBound, bound: ActivityBound) -> bool] composes the previously discussed #jmono[resource_profile] and #jmono[cannot_schedule_activity_with_profile] functions. It returns `true` if either the resource profile had a conflict or if it found an activity conflict. It builds the resource profile only on the timepoints within the activity's bounds. Finally, #jmono[resource_profile_full(capacity: N, bounds: list ActivityBound) -> bool] determines the earliest and latest possible starting times of all activities and then builds a resource profile on that interval, returning `true` if it can find a time conflict.
+We are now ready for the main checker definition. However, we will not use @fun:can_schedule_activity_with_profile and @fun:resource_profile directly. Instead, we will define a function `check_conflict_for_bound` (@pseudo:cumulative_checker) that constructs a resource profile only for the times between the possible active window of an activity. Furthermore, it uses @fun:check_time_conflict_horizon to check for time conflicts over the constraint's entire horizon in case it cannot find a conflict in the consequent's possible active time window. It also uses @fund:any_true[l] to check for conflicts in all activities as a fallback. This is necessary for facts without a consequent.
 
-Written in pseudocode, the checker then looks like the following. As the name suggests, #jmono[any_true] runs a partially applied function on all elements of a list, returning `true` if any of them return `true`.
+#funlink(<desc:check_time_conflict_horizon>, "check_time_conflict_horizon")
+#fundesc(title: [
+    Computes the minimum lower bound and maximum upper bound of all activities in `bounded_activities` and then returns `true` if it can find a time conflict using @fun:resource_profile over the interval between that min and max. This means it looks for a time conflict over the entire constraint's horizon.
+  ])[
+  ```tiplang2
+  Definition check_time_conflict_horizon(
+    capacity: N,
+    bounded_activities: List[BoundedActivities]
+  ) -> bool:
+  ```
+] <desc:check_time_conflict_horizon>
 
 #pseudocode[```tiplang2
+Definition check_conflict_for_bound(
+  capacity: N, 
+  bounded_activities: List[BoundedActivity], 
+  activity: BoundedActivity
+) -> bool:
+  latest_active_time := lower(activity) + length(profile) - 1
+  profile_times := range(lower(activity), latest_active_time)
+  match resource_profile(capacity, profile_times, bounded_activities):
+    case None:
+      return true
+    case Some(profile):
+      return negb(can_schedule_activity_with_profile(activity, profile))
+
 Definition cumulative_checker(fact: ProofFact, constraint: CumulativeConstraint) -> bool:
   match infer_cumulative_activity_bounds(constraint, fact):
     case (nil, _):
@@ -1839,18 +2211,20 @@ Definition cumulative_checker(fact: ProofFact, constraint: CumulativeConstraint)
     case (activity_bounds, maybe_rhs_bound):
       match maybe_rhs_bound:
         case Some(rhs_bound):
-          if cannot_schedule_activity(capacity(constraint), activity_bounds, 
-                                      rhs_bound):
+          if check_conflict_for_bound(capacity(constraint), activity_bounds, rhs_bound):
             return true
     
-      if resource_profile_full(capacity(constraint), activity_bounds):
+      if check_time_conflict_horizon(capacity(constraint), activity_bounds):
         return true
-      if any_true(cannot_schedule_activity(capacity, activity_bounds), activity_bounds):
+      if any_true(check_conflict_for_bound(capacity(constraint), activity_bounds),  
+                  activity_bounds):
         return true
 ```
-]
+] <pseudo:cumulative_checker>
 
 == Proofs <sec:check:cumul:proofs>
+
+#note[These proofs still refer to an older version of the checker, I will update them in the next few days.]
 
 #let inferbounds = jmono[inferred_cumulative_bounds]
 #let inferdoms = jmono[infer_domains]
@@ -1975,7 +2349,15 @@ We explicitly did not write an actual invocation of #resprofile in the pseudocod
 
 === Combined steps
 
-A number of values are computed in a single iteration, as opposed to multiple ones, again for performance reasons. An example that actually has implications for the proof is the computation of the active list in #jmono[profile_to_active_list]. Instead of building another range, then combining, and then mapping, a function called `z_map` is used that computes the time inputs as it recurses. 
+A number of values are computed in a single iteration, as opposed to multiple ones, again for performance reasons. An example that actually has implications for the proof is the computation of the active list in @fun:profile_to_active_list. Instead of building another range, then combining, and then mapping, a function called `z_map` is used that computes the time inputs as it recurses. 
+
+=== Run of consecutive values <subsec:consec>
+
+// Proving the correctness of a function that 
+
+#todosm[Add this if time allows]
+
+// TODO
 
 #pagebreak(weak: true)
 
@@ -2070,7 +2452,7 @@ We do not have a solution for this situation (we are unsure if we can even justi
 
 We find that choosing how to describe the behavior of a particular function, or what parts to describe and which parts to ignore, is very important to achieving productivity in a proof assistant such as Rocq. Sometimes, the right choice is to actually not write a specification at all, but to simply take the actual function definition as the canonical specification and prove that other functions are equivalent to it.
 
-#todo[Example of evolution of cumulative implementation towards using zmap and similar]
+#todo[Example of evolution of cumulative implementation towards using zmap and similar if time allows]
 
 // == Building blocks
 
@@ -2108,15 +2490,18 @@ We find that choosing how to describe the behavior of a particular function, or 
 
 = Discussion <sec:discussion>
 
-In the previous sections, we presented our contributions. Our goal is to determine how to develop checkers for individual proof steps in a formally verified CP unsatisfiability proof checker. Our results can be summarized as follows:
-+ *(Propagator inference checker methodology)* We developed a general methodology for developing propagator inference checkers, which can be used both within the collaborative effort and by external contributors to extend the checker with support for additional constraints. The methodology's main contribution is highlighting the importance of identifying the conflict types of a particular propagator.
-+ *(Perforated intervals: formalized theory and implementation)* We developed and formalized the theory of the holes+bounds-based _perforated intervals_. Perforated intervals can be used as a domain representation. It supports operations that allow updating the domain with an atomic constraint, checking whether an atomic constraint holds for the domain, and checking whether the domain is empty. Furthermore, it allows the efficient construction of a domain based on a list of atomic constraints, which is also important for inference checkers. We also define conditions under which efficient implementations of these checks actually decide the properties we are interested in (domain _tightness_). All of the theory and implementations are constructed and formalized in Rocq. We present lemmas and (partial) proofs that can be read by non-experts in Rocq.
-+ *(Formally verified implementation of deduction checker)* We implemented and formalized the checker for the deduction step, which plays a critical role in the proof system. For this implementation/formalization, we also developed machinery for working with the domains of multiple variables at once. This machinery could also be reused for inference checkers.
-+ *(Formally verified alldifferent checker)* We developed a formally verified checker for alldifferent reasoning. Any valid alldifferent inference without any redundant constraints can be verified by our checker. This means any propagation by a domain consistent propagator (the strongest possible propagator) can be verified.
-+ *(Formally verified cumulative checker)* We developed a formally verified checker for cumulative timetable reasoning that verifies any valid inference made using a timetable propagator.
-+ *(Rocq findings)* We presented findings about working with Rocq, which is the language/tool used to implement and formally verify the checker.
+// In the previous sections, we presented our contributions. Here, we interpret our results, discuss their implications, compare it to related work and make recommendations for future work. 
 
-To prevent this section from becoming too nested, we present the discussion in a series of mostly self-contained subsections, each a full discussion of one or more of our 6 main contributions. However, we do provide a separate future work section and discuss some limitations of this work as a whole. 
+We first discuss our results in a series of mostly self-contained subsections, each a full discussion of one or more of our main contributions. In these sections, we summarize our contribution and discuss their implications. We also compare them with related work and discuss limitations specific to these contributions. We then discuss some general limitations that apply to our results more broadly, followed by various recommendations for future work.
+
+// + *(Propagator inference checker methodology)* We developed a general methodology for developing propagator inference checkers, which can be used both within the collaborative effort and by external contributors to extend the checker with support for additional constraints. The methodology's main contribution is highlighting the importance of identifying the conflict types of a particular propagator.
+// + *(Perforated intervals: formalized theory and implementation)* We developed and formalized the theory of the holes+bounds-based _perforated intervals_. Perforated intervals can be used as a domain representation. It supports operations that allow updating the domain with an atomic constraint, checking whether an atomic constraint holds for the domain, and checking whether the domain is empty. Furthermore, it allows the efficient construction of a domain based on a list of atomic constraints, which is also important for inference checkers. We also define conditions under which efficient implementations of these checks actually decide the properties we are interested in (domain _tightness_). All of the theory and implementations are constructed and formalized in Rocq. We present lemmas and (partial) proofs that can be read by non-experts in Rocq.
+// + *(Formally verified implementation of deduction checker)* We implemented and formalized the checker for the deduction step, which plays a critical role in the proof system. For this implementation/formalization, we also developed machinery for working with the domains of multiple variables at once. This machinery could also be reused for inference checkers.
+// + *(Formally verified alldifferent checker)* We developed a formally verified checker for alldifferent reasoning. Any valid alldifferent inference without any redundant constraints can be verified by our checker. This means any propagation by a domain consistent propagator (the strongest possible propagator) can be verified.
+// + *(Formally verified cumulative checker)* We developed a formally verified checker for cumulative timetable reasoning that verifies any valid inference made using a timetable propagator.
+// + *(Rocq findings)* We presented findings about working with Rocq, which is the language/tool used to implement and formally verify the checker.
+
+// To prevent this section from becoming too nested, we present the discussion in a series of mostly self-contained subsections, each a full discussion of one or more of our 6 main contributions. However, we do provide a separate future work section and discuss some limitations of this work as a whole. 
 
 // #todo[interpretations: met expectations, what was unexpected? compare with related work.]
 
@@ -2128,21 +2513,39 @@ To prevent this section from becoming too nested, we present the discussion in a
 
 == Propagator inference methodology and propagator inference checkers
 
-Our primary goal is to determine how to develop formally verified checkers for checking individual proof steps in a CP unsatisfiability proof checker. We specifically do this for two types of steps: propagator inference steps and deduction steps. There is only one type of deduction step that will not require any further expansion. However, there are a practically unbounded number of different propagators and nearly as many constraints. Hence, a very important goal was making it possible for future work to develop new checkers in a mostly mechanical way based on the propagation algorithm with proofs no more difficult than pen-and-paper proofs of the propagation algorithm's correctness. In this section, we interpret our proposed methodology for developing propagator inference checkers and the construction of an alldifferent and cumulative checker, discuss the implications, compare it with related work, and discuss some limitations. 
+In this section, we interpret our proposed methodology for developing propagator inference checkers and the construction of an alldifferent and cumulative checker, discuss the implications, compare it with related work, and discuss some limitations.
 
-We believe our propagator inference methodology does not fully achieve this goal, but does provide an important step that increases understanding. Furthermore, we believe our cumulative checker is one of the first instances of a truly non-trivial, formally verified checker for a very CP-specific propagation algorithm. In particular, both the alldifferent checker and the linear checker (the latter is not our contribution, but part of the collaborative effort and described by Sidorov et al. @sidorov2025checker) handle only a single conflict type and check only a single condition: Is the union of domains smaller than the number of variables (alldifferent)? Is the minimum value of the left-hand side greater than the right-hand side (linear)? Furthermore, other approaches for formally verified CP either use a generic algorithm that is not constraint specific @carlier2012certified, or encode models and reasoning in another, simpler language @gocht2022auditable. However, we cannot call our cumulative checker truly the first of its kind, as cumulative was also considered in the unpublished work of Gange et al. @gange1certifying. We do believe it is the first of its kind that is part of a checker with a fully formalized and developed proof system @sidorov2025checker. The work of Gange et al. also did not propose any general methodology for inference checkers, which we believe has been applied successfully to cumulative. 
+As there are a practically unbounded number of different propagators and nearly as many constraints, our goal was to make it possible for future work to develop new checkers in a mostly mechanical way. It should be possible to derive them from the propagation algorithm with formal proofs no more difficult than pen-and-paper proofs of the propagation algorithm's correctness. 
+
+We believe our propagator inference methodology does not fully achieve this goal, but does provide an important first step that increases the understanding of these checkers. Furthermore, we believe our cumulative checker is one of the first instances of a truly non-trivial, formally verified checker for a very CP-specific propagation algorithm. 
+
+In particular, both the alldifferent checker and the linear checker (the latter is not our contribution, but part of the CP proof checker project @sidorov2025checker) handle only a single conflict type and check only a single condition: Is the union of domains smaller than the number of variables (alldifferent)? Is the minimum value of the left-hand side greater than the right-hand side (linear)? 
+
+Furthermore, other approaches for formally verified CP either use a generic algorithm that is not constraint specific @carlier2012certified, or encode models and reasoning in another, simpler language (SAT or PB) @gocht2022auditable @veksler2010CSPprof. 
+
+However, we cannot call our cumulative checker truly the first of its kind, as cumulative was also considered in the unpublished work of Gange et al. @gange1certifying. We do believe it is the first of its kind that is part of a checker with a fully formalized and developed proof system @sidorov2025checker. The work of Gange et al. also did not propose any general methodology for inference checkers, which we believe has been applied successfully to cumulative. 
 
 Our methodology can bring clarity to the important elements of checking propagations through its introduction of the concept of _conflict types_ (@sec:infmethod:conflicttypes), with two clear examples in the cumulative checker: time conflicts and activity conflicts (@check:cumul).
 
-Our alldifferent checker is, implementation-wise, a more modest result. However, we believe that it is a clear example of constraints, of which we have a very deep theoretical understanding. It implies that developing checkers for other constraints that are similarly deeply understood should be straightforward. It also provides a clear motivation to study the literature and find analogs of Hall's theorem (@thm:hall). Furthermore, with the implementation of our alldifferent checker, we tested another hypothesis related to formal verification (@sec:rocq:twocat).
+Our alldifferent checker is, implementation-wise, a more modest result. However, we believe that it is a clear example of a class of constraints of which we have a very deep theoretical understanding. It implies that developing checkers for other constraints that are similarly deeply understood should be straightforward. It also provides a clear motivation to study the literature and find analogs of Hall's theorem (@thm:hall). Furthermore, with the implementation of our alldifferent checker, we tested another hypothesis related to formal verification (@sec:rocq:twocat).
 
-We now discuss some limitations. First of all, we have only tested the methodology fully on a single constraint (cumulative) and propagator (timetable). The linear inequality checker and alldifferent checker are too simple for the methodology to fully apply. However, this can also be seen as a positive fact: we have not found a constraint to be too difficult to verify with our methodology.
+We now discuss some limitations. First of all, we have only tested and developed the methodology based on a single constraint (cumulative) and propagator (timetable). The linear inequality checker and alldifferent checker are too simple for the methodology to apply. However, this can also be seen as a positive fact: we have not found a constraint to be too difficult to verify with our methodology.
 
-A major limitation of our methodology is that it provides no guidance on the _formal verification_ part of implementing a propagator inference checker. While this was an explicit goal, we have not found any generally applicable concepts that can make formally verifying the conflict checkers any easier. Of course, our work does contribute to this (through perforated intervals and potentially re-using code from the cumulative checker for other constraints related to activities). One thing we observe is that the major difficulty comes from implementation-coupled proof segments (see @sec:rocq:twocat), which we believe is hard to generalize (as by definition it relies heavily on the specific implementation, which will always differ between constraints). 
+Another major limitation of our methodology is that it provides no guidance on the _formal verification_ part of implementing a propagator inference checker. While this was an explicit goal, we have not found any generally applicable concepts that can make formally verifying the conflict checkers any easier. Our overall results do contribute to this (through perforated intervals and potentially re-using code from the cumulative checker for other constraints related to activities). One thing we observe is that the major difficulty comes from implementation-coupled proof segments (see @sec:rocq:twocat), which we believe is hard to generalize (as by definition it relies heavily on the specific implementation, which will always differ between constraints). 
 
 == Perforated intervals
 
-One of our most important and most practical contributions is the development of perforated intervals: their (formalized) theory and their (formally verified) implementation (including check and update operations). The success and generalizability of perforated intervals were unexpected, as we had no explicit goal related to it: only an idea that we wished to develop building blocks that could be reused by multiple inference checkers. To our knowledge, a holes+interval-based domain representation has not been thoroughly studied on its own merit before, nor do we know of any study about the concept of tightness. While the theory of perforated intervals is simple, this is actually a large benefit when it comes to formal verification, as simple concepts are often more easily formally verified. All of our checkers rely on perforated intervals, and due to their use at the heart of the checker (through the deduction step), they are an integral part of the proof checker implementation. Furthermore, preliminary experimental results from Sidorov et al. @sidorov2025checker indicate they are not a huge bottleneck in practice, although this requires further study. If this is confirmed, we hypothesize this can be primarily attributed to the efficient implementation of red-black trees in Rocq for our sets and maps @appel2011rbt. 
+One of our most important and most practical contributions is the development of perforated intervals: their (formalized) theory and their (formally verified) implementation (including check and update operations). 
+
+The success and generalizability of perforated intervals were unexpected, as we had no explicit goal related to it: only an idea that we wished to develop building blocks that could be reused by multiple inference checkers. 
+
+To our knowledge, a holes+interval-based domain representation has not been thoroughly studied on its own merits before, nor do we know of any study about the concept of _tightness_. 
+
+While the theory of perforated intervals is simple, this is actually a large benefit when it comes to formal verification, as simple concepts are often more easily formally verified. 
+
+All of our checkers rely on perforated intervals, and due to their use at the heart of the checker (through the deduction step), they are an integral part of the proof checker implementation and its performance characteristics. 
+
+Preliminary experimental results from Sidorov et al. @sidorov2025checker indicate they are not a huge bottleneck in practice, although this requires further study. If this is confirmed, we hypothesize this can be primarily attributed to the efficient implementation of red-black trees in Rocq for our sets and maps by Appel et al. @appel2011rbt. 
 
 In the next section, we highlight the usages of perforated intervals in our work and the overall checker. After that, we discuss the relevance of additional results not necessary for the checker's soundness proof, followed by a discussion of some alternatives. Finally, we discuss the deduction step, as its implementation relies primarily on perforated intervals.
 
@@ -2155,7 +2558,9 @@ Perforated intervals are used throughout the checker, primarily at points where 
 3. In the alldifferent checker, they are used to first aggregate the domains of all variables in the fact. After this, the perforated intervals that are bounded on both sides are _materialized_: they are converted into element lists. This eases the computation (and subsequent formal verification) of the union of domains. In the future, materialization could be avoided by implementing a union operation over perforated intervals.
 4. Critically, in the deduction checker, they are used to track the domains of each variable as inferences are checked and applied in order. As perforated intervals support efficient check functions (@sec:perfint:checks) and update functions (@sec:perfint:updates), all operations are logarithmic. If any variable has an empty domain at the end of the deduction step, we know the deduction is valid.
 
-We expect all future propagator inference checkers to also use perforated intervals, as they allow the inference of rich domain information from facts, which are represented as lists of atomic constraints. We spent much of our time on exactly this problem, which means that future checkers can simply reuse this infrastructure. The correctness specification (see @sec:res:infcheck) of this procedure is also phrased in such a way and comes with a number of additional lemmas that simplify the proof of inference checkers by transforming it from a proof about fact validity into a proof about unsatisfiability under a domain (it thereby also performs the right-hand side negation we saw was useful already in @proc:verifystrat, propagator verification strategy).
+We expect all future propagator inference checkers to also use perforated intervals, as they allow the inference of rich domain information from facts, which are represented as lists of atomic constraints. We spent much of our time on exactly this problem, which means that future checkers can simply reuse this infrastructure. 
+
+The correctness specification (see @sec:res:infcheck) of this procedure is also phrased in such a way and comes with a number of additional lemmas that simplify the proof of inference checkers by transforming it from a proof about fact validity into a proof about unsatisfiability under a domain (it thereby also performs the right-hand side negation we saw was useful already in @proc:verifystrat, propagator verification strategy).
 
 === Completeness
 
@@ -2313,9 +2718,13 @@ We also summarize points related to future work mentioned in earlier parts of th
 
 #pagebreak(weak: true)
 
-= Conclusion (extended summary)
+= Conclusion (extended summary) <sec:conclusion>
 
-Constraint Programming (CP) solvers have a propensity for bugs due to their use of performance engineering and complex algorithms. This reduces trust in their results, which are hard to check in the case of optimality or unsatisfiability claims. Proof logging and proof checking are a promising way to remedy this by allowing optimality and unsatisfiability claims to be verified. Previous work showed that it is possible to instrument state-of-the-art solvers to produce proofs of unsatisfiability. However, they relied on a method that requires encoding CP models into SAT or pseudo-Boolean constraints, which lack expressive power. This results in potentially larger proofs and difficulty translating specialized CP reasoning to these more limited languages. A collaborative effort, of which this work is a part, seeks to improve this by developing a proof system that allows natively expressing CP models and reasoning. To achieve the highest possible trust, given the fact that verification requires reasoning of a similar strength to solvers, the CP unsatisfiability proof checker developed by the collaborative effort is formally verified to be sound: when it accepts a proof, we know the proof's claim to be correct. Proofs in the CP proof system consist of a sequence of individual proof steps, each of which must be individually verified. This work asks _how formally verified checkers for individual proof steps can be developed_. This is challenging because one of the main proof step types -- propagator inferences -- can use any type of CP reasoning. Consequently, supporting a new constraint or propagator requires the implementation of a dedicated inference checker.
+Constraint Programming (CP) solvers have a propensity for bugs due to their use of performance engineering and complex algorithms. This reduces trust in their results, which are hard to check in the case of optimality or unsatisfiability claims. Logging and checking proofs is a promising way to remedy this by allowing optimality and unsatisfiability claims to be verified. 
+
+Previous work showed that it is possible to instrument state-of-the-art solvers to produce proofs of unsatisfiability. However, there does not yet exist a way to verify this reasoning in a CP-native fashion. Instead, existing methods require the encoding of models into more restricted formats and explaining reasoning in terms of simpler reasoning. This results in potentially larger proofs. Furthermore, it can be difficult to explain some types of reasoning in these simpler languages. 
+
+This work is a part of a project to improve this by developing an end-to-end CP-native proof system and proof checker. To achieve the highest possible trust, given the fact that verification requires reasoning of a similar strength to solvers, the CP proof checker is formally verified to be sound: when it accepts a proof, we know the proof's claim to be correct. Proofs in the CP proof system consist of a sequence of individual proof steps, each of which must be individually verified. This work asks _how formally verified checkers for individual proof steps can be developed_. This is challenging because one of the main proof step types -- propagator inferences -- can use any type of CP reasoning. Consequently, supporting a new constraint or propagator requires the implementation of a dedicated inference checker.
 
 Our work makes the following main contributions:
 
@@ -2326,9 +2735,18 @@ Our work makes the following main contributions:
 - A formally verified checker for alldifferent that can catch all valid alldifferent propagations, as long as inference proof steps contain no redundant information. This checker uses Hall's theorem to determine whether an alldifferent constraint is unsatisfiable. As the checker has a powerful tool (Hall's theorem) to understand the possible conflicts, it does not need our inference checker methodology.
 - Findings about the usage of Rocq, which is the language and proof assistant used to implement and verify the CP proof checker. In particular, we find two types of proof segments: conceptual proofs and implementation-coupled proofs. We successfully tested this hypothesis by decoupling the two types in our alldifferent checker.
 
-Our work is a significant step towards achieving a formally verified CP proof checker capable of verifying CP-native and integer reasoning, while also making theoretical contributions through the theory of perforated intervals. Our proposed methodology should make the checker extensible, as should our perforated intervals and library of utilities. In particular, our methodology advances our goal by tackling the checking algorithms, while perforated intervals and our examples advance the formal verification part of it. However, there are some important limitations. First of all, we identify a significant formal verification burden, which we were not able to alleviate with automation. Our proposed inference checker methodology also provides no guidance on formal verification, focusing instead only on developing the checking algorithm. We see that the approach adopted by the CP proof system used in this work increases this burden compared to earlier approaches for CP unsatisfiability proofs (that encode the problem in a more limited language, such as pseudo-Boolean constraints) by requiring a formally verified checker for every type of inference. However, the CP proof system has the major benefit that less conceptual work is required to translate propagation algorithms and constraint models, as they can be supported directly and do not have to be translated to reasoning in more limited languages. Finally, this work lacks an empirical evaluation, as the proof checker is still missing important components. This complicates judging our work's practical implications. However, this is expected to be addressed in upcoming work by the collaboration.
+Our work is a significant step towards achieving a formally verified CP proof checker capable of verifying CP-native and integer reasoning, while also making theoretical contributions through the theory of perforated intervals. Our proposed methodology should make the checker extensible, as should our perforated intervals and library of utilities. 
 
-We see multiple avenues to further improve our work. First of all, our proposed methodology could be improved by developing guidance for the formal verification of checkers for conflict types. This would significantly advance our goal of how to develop _formally verified_ proof step checkers. Next, multiple performance improvements are possible, in particular for cumulative by not considering all timepoints and for alldifferent by computing the domain union more efficiently. Adding support for new constraints will also advance our understanding of inference checking by providing additional examples and testing our methodology. Finally, a large conceptual improvement to inference checking could be made by investigating support for richer _hints_ to the proof system. These hints can tell the inference checkers "where to look". In the case of cumulative this would be especially helpful for conflict inferences, providing significant speedups.
+In particular, our methodology advances our goal by tackling the checking algorithms, while perforated intervals and our examples advance the formal verification part of it. However, there are some important limitations. 
+- First of all, we identify a significant formal verification burden, which we were not able to alleviate with automation. Our proposed inference checker methodology also provides no guidance on formal verification, focusing instead only on developing the checking algorithm. 
+- We see that the approach adopted by the CP proof system used in this work increases this burden compared to earlier approaches for CP unsatisfiability proofs (that encode the problem in a more limited language, such as pseudo-Boolean constraints) by requiring a formally verified checker for every type of inference. However, the CP proof system has the major benefit that less conceptual work is required to translate propagation algorithms and constraint models, as they can be supported directly and do not have to be translated to reasoning in more limited languages. 
+- Finally, this work lacks an empirical evaluation, as the proof checker is still missing important components. This complicates judging our work's practical implications. However, this is expected to be addressed in upcoming work by the collaboration.
+
+We see multiple avenues to further improve our work. 
+- First of all, our proposed methodology could be improved by developing guidance for the formal verification of checkers for conflict types. This would significantly advance our goal of how to develop _formally verified_ proof step checkers. 
+- Next, multiple performance improvements are possible, in particular for cumulative by not considering all timepoints and for alldifferent by computing the domain union more efficiently. 
+- Adding support for new constraints will also advance our understanding of inference checking by providing additional examples and testing our methodology. 
+- Finally, a large conceptual improvement to inference checking could be made by investigating support for richer _hints_ to the proof system. These hints can tell the inference checkers "where to look". In the case of cumulative this would be especially helpful for conflict inferences, providing significant speedups.
 
 
 
@@ -2496,11 +2914,18 @@ We list some additional descriptions of some elementary functions used in the ps
   ```
 ] <desc:cardinal>
 
-
+#fundlink(<desc:is_mandatory>, "is_mandatory")
+#fundesc(title: [
+    Given a `BoundedActivity` #spro[act], computes whether #spro[act] is active at time $t$, i.e., whether #jmono[upper(act) <= t < lower(act) + duration(act).]
+  ])[
+  ```tiplang2
+  Definition is_mandatory(bounded_activity: BoundedActivity, t: Z) -> bool:
+  ```
+] <desc:is_mandatory>
 
 #fundlink(<desc:filter_mandatory>, "filter_mandatory")
 #fundesc(title: [
-    Given a list of `BoundedActivity`, returns only those activities that are mandatory at `t`, by computing for each activity #spro[act] whether `upper(act) <= t < lower(act) + duration(act). `
+    Given a list of `BoundedActivity`, returns only those activities s.t. @fund:is_mandatory returns true for `t`.
   ])[
   ```tiplang2
   Definition filter_mandatory(
@@ -2526,3 +2951,27 @@ We list some additional descriptions of some elementary functions used in the ps
   Definition map_valid(f: A->Option[B], l: List[A]) -> Option[List[B]]:
   ```
 ] <desc:map_valid>
+
+#fundlink(<desc:range>, "range")
+#fundesc(title: [
+    Returns a list consisting of every integer in the in the interval `[lb, ub]` in increasing order. Returns an empty list if `ub` $<$ `lb`.])[
+  ```tiplang2
+  Definition range(lb: Z, ub: Z) -> List[Z]:
+  ```
+] <desc:range>
+
+#fundlink(<desc:combine>, "combine")
+#fundesc(title: [
+    Combines two lists s.t. the $i$th element of the output list is the pair consisting of the $i$th element of `l1` and the $i$th element of `l2`. Output list has the same length as the shortest of `l1` and `l2`.])[
+  ```tiplang2
+  Definition combine(l1: List[A], l2: List[B]) -> List[A*B]:
+  ```
+] <desc:combine>
+
+#fundlink(<desc:any_true>, "any_true")
+#fundesc(title: [
+    Returns `true` if `f(a)=true` for any `a` in `l`.])[
+  ```tiplang2
+  Definition any_true(f: A->bool, l: List[A]) -> bool:
+  ```
+] <desc:any_true>

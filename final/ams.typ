@@ -41,6 +41,7 @@
 
   // Set the body font. AMS uses the LaTeX font.
   set text(size: normal-size, font: "New Computer Modern")
+  show math.equation: set text(font: "New Computer Modern Math")
 
   // Configure the page.
   set page(
@@ -54,17 +55,33 @@
 
     header-ascent: 32pt,
     header: context {
-      let h = query(selector(heading.where(level: 1)).before(here()))
-      let h = if h.len() > 0 {
-        h.last().body
+      let here-loc = here()
+  
+      // Find headings on the current page
+      let page-headings = query(
+        selector(heading.where(level: 1))
+          .after(here-loc, inclusive: false)
+      )
+      
+      // Check if there's a heading at the very start of this page
+      let h = if page-headings.len() > 0 {
+        // Get the first heading on this page
+        let first-on-page = page-headings.first()
+        
+        // Check if it's at the top of the page (same page as header)
+        if first-on-page.location().page() == here-loc.page() {
+          []
+        } else {
+          // Fall back to the previous heading
+          let prev = query(selector(heading.where(level: 1)).before(here-loc))
+          if prev.len() > 0 { prev.last().body } else { [] }
+        }
       } else {
-        []
+        // No heading on this page, use the previous one
+        let prev = query(selector(heading.where(level: 1)).before(here-loc))
+        if prev.len() > 0 { prev.last().body } else { [] }
       }
-      //align(center, text(size: script-size, [#i]))
-      // TODO fix header
-      // let i = counter(page).get().first()
-      // if i == 1 { return }
-      // set text(size: script-size)
+
       align(center, h)
     },
     footer-descent: 36pt,
@@ -164,31 +181,6 @@
     emph(it.body)
   })
 
-  // show figure.where(kind: "function"): it => {
-  //   show figure.caption: caption => {
-  //     strong({
-  //       caption.supplement
-  //       [ ]
-  //       context counter(heading).get().first()
-  //       [.]
-  //       numbering(caption.numbering, ..caption.counter.at(it.location()))
-  //     })
-  //     [: ]
-  //     caption.body
-  //   }
-  //   it.caption
-  //   // strong({
-  //   //   it.supplement
-  //   //   [ ]
-  //   //   [#counter(heading).get().first().]
-  //   //   context it.counter.display(it.numbering)
-  //   //   it.caption
-  //   // })
-  //   [ ]
-  //   set text(font: "New Computer Modern Mono", size: 10pt)
-  //   it.body
-  // }
-
   // Display the title and authors.
   v(35pt, weak: true)
   align(center, {
@@ -257,41 +249,3 @@
   }
 
 }
-
-// // The ASM template also provides a theorem function.
-// #let theorem(body, numbered: true) = figure(
-//   body,
-//   kind: "theorem",
-//   supplement: [Theorem],
-//   numbering: if numbered { n => counter(heading).display() + [#n] }
-// )
-
-// #let defn(body, numbered: true) = align(left)[#figure(
-//   [
-
-//     *Definition.*
-//     #body
-//   ],
-//   placement: none,
-//   kind: "definition",
-//   supplement: [Definition],
-//   numbering: if numbered { n => counter(heading).display() + [#n] }
-// )]
-
-// // And a function for a proof.
-// #let proof(body) = block(spacing: 11.5pt, {
-//   emph[Proof.]
-//   [ ]
-//   body
-//   h(1fr)
-
-//   // Add a word-joiner so that the proof square and the last word before the
-//   // 1fr spacing are kept together.
-//   sym.wj
-
-//   // Add a non-breaking space to ensure a minimum amount of space between the
-//   // text and the proof square.
-//   sym.space.nobreak
-
-//   $square.stroked$
-// })
