@@ -1,0 +1,130 @@
+%YAML 1.2
+---
+name: TipLang
+file_extensions:
+  - tiplang2
+scope: source.tiplang
+
+variables:
+  identifier: '\b[a-zA-Z_][a-zA-Z0-9_]*\b'
+  type_name: '[^\s:,)]+'
+
+contexts:
+  main:
+    - include: comments
+    - include: function-definition
+    - include: inductive-definition
+    - include: record-definition
+    - include: keywords
+    - include: function-calls
+    - include: operators
+    - include: constants
+
+  comments:
+    - match: '#.*$'
+      scope: comment.line.tiplang
+
+  function-definition:
+    - match: '\b(Definition|Recursive)\s+({{identifier}})\s*\('
+      captures:
+        1: keyword.declaration.function.tiplang
+        2: entity.name.function.tiplang
+      push: function-parameters
+
+  function-parameters:
+    - match: '({{identifier}})\s*(:)\s*({{type_name}})'
+      captures:
+        1: meta.annotation.tiplang
+        2: punctuation.separator.type.tiplang
+        3: support.macro
+    - match: '\)\s*(->)\s*({{type_name}})\s*:'
+      captures:
+        1: punctuation.separator.return-type.tiplang
+        2: support.macro
+        3: punctuation.section.function.begin.tiplang
+      pop: true
+
+  inductive-definition:
+    - match: '\b(Inductive)\s+({{identifier}})\s*:'
+      captures:
+        1: keyword.declaration.function.tiplang
+        2: entity.name.function.tiplang
+      push: inductive-cases
+
+  inductive-cases:
+    - match: '\b(case)\s+({{identifier}})'
+      captures:
+        1: keyword.control.case.tiplang
+        2: entity.name.function.tiplang
+      push: case-parameters
+    - match: '(?=^\S)'
+      pop: true
+
+  case-parameters:
+    - match: '\('
+      scope: punctuation.section.arguments.begin.tiplang
+      push:
+        - match: '({{identifier}})\s*(:)\s*({{type_name}})'
+          captures:
+            1: meta.annotation.tiplang
+            2: punctuation.separator.type.tiplang
+            3: support.macro
+        - match: '\)'
+          scope: punctuation.section.arguments.end.tiplang
+          pop: true
+    - match: '(?=\n)'
+      pop: true
+
+  record-definition:
+    - match: '\b(Record)\s+({{identifier}})\s*:'
+      captures:
+        1: keyword.declaration.function.tiplang
+        2: entity.name.function.tiplang
+      push: record-fields
+
+  record-fields:
+    - match: '({{identifier}})\s*(:)\s*({{type_name}})'
+      captures:
+        1: meta.annotation.tiplang
+        2: punctuation.separator.type.tiplang
+        3: support.macro
+    - match: '(?=^\S)'
+      pop: true
+
+  keywords:
+    - match: '\b(match)\b'
+      scope: keyword.control.match.tiplang
+    - match: '\b(case)\b'
+      scope: keyword.control.case.tiplang
+    - match: '\b(return)\b'
+      scope: keyword.control.return.tiplang
+    - match: '\b(if|else)\b'
+      scope: keyword.control.conditional.tiplang
+    - match: '\b(and|or)\b'
+      scope: keyword.control.conditional.tiplang
+    - match: '\b(Some|None)\b'
+      scope: support.macro
+
+  function-calls:
+    - match: '({{identifier}})\s*(?=\()'
+      scope: variable.function.tiplang
+      push:
+        - match: '\('
+          scope: punctuation.section.arguments.begin.tiplang
+          set:
+            - match: '\)'
+              scope: punctuation.section.arguments.end.tiplang
+              pop: true
+            - include: main
+
+  operators:
+    - match: ':'
+      scope: punctuation.separator.tiplang
+    - match: ','
+      scope: punctuation.separator.tiplang
+
+  constants:
+    - match: '\b(true|false)\b'
+      scope: punctuation.definition.list
+    - match: '{{identifier}}'
+      scope: variable.other.tiplang
