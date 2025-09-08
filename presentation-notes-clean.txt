@@ -1,0 +1,71 @@
+# Thesis Defense Presentation Notes
+
+## TEXT SIZE SYSTEM (6 SIZES):
+- **text-present-xs** (1vw): Minimal details, footnotes
+- **text-present-small** (1.5vw): Supporting details, captions  
+- **text-present** (2vw): Body text, standard content
+- **text-present-large** (2.5vw): Section headers, important content
+- **text-present-xl** (3vw): Slide titles, major headings
+- **text-present-hero** (4vw): Special emphasis, title components
+
+## SEMANTIC COLOR SYSTEM (TU Delft Brand Colors):
+- **koningsblauw** (blue): "Proof" and "Checking" semantic connection
+- **paars** (purple): Main emphasis like "Step" 
+- **bosgroen** (green): "Constraint Programming"
+- **bordeaux** (red): "Unsatisfiability", problems, gaps
+- **donkergrijs-muted** (gray): De-emphasized content
+- All colors have -muted variants for reduced emphasis
+
+## CRITICAL DESIGN PRINCIPLES:
+- **1.7:1 aspect ratio** - extremely limited vertical space
+- **p-4 to p-6 padding maximum** - no larger
+- **space-y-4 max spacing** - tighter is better
+- **Only use global variables** - never text-xl, text-3xl etc.
+
+## SLIDE STRUCTURE:
+
+### 1. Title Slide
+- 5 animations highlighting key components: CP → Proof Checker → Unsatisfiability → Step
+- Uses TU Delft colors with gray highlighting backgrounds
+
+### 2. Motivation  
+- Healthcare example introducing constraint programming
+- Grid layout with SVG figure on right side
+
+### 3. Challenge
+- Solver complexity and error potential  
+- Focus on unsatisfiability claims
+- Audience interaction: why harder to check than solutions
+- Introduces proof of unsatisfiability concept
+
+### 4. Research Question
+- Why individual steps are necessary
+- Main research question
+
+### 5. Our Approach
+- Our focus: individual proof steps, key constraints
+- Our method: machine-checked proofs in Rocq
+
+### 6. Contributions Overview
+- Three pillars: Theory, Implementation, Verification
+
+### 7. Perforated Intervals
+- Theoretical contribution details
+
+### 8. Proof Step Types  
+- Two types of proof steps
+
+### 9. Constraint Checkers
+- Implementation examples
+
+### 10. Achievements
+- Summary of contributions
+
+### 11. Future Work
+- Limitations and research directions
+
+### 12. Summary
+- Final overview and credits
+
+## CURRENT STATUS: ✅ STRUCTURE DEFINED
+All slides use TU Delft colors and global CSS variables exclusively.

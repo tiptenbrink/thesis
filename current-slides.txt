@@ -1,0 +1,246 @@
+# Current Slide Analysis & Improvement Recommendations
+
+## CURRENT SLIDE STRUCTURE (12 slides):
+
+### 1. Title Slide (5 animations)
+**Current State:**
+- Progressive highlighting of key title components: CP(1) → Proof Checker(3) → Unsatisfiability(2) → Step(4)
+- Uses conditional gray backgrounds for highlighting
+- Grid layout with author/supervisor info at bottom
+- TU Delft color coding: bosgroen(CP), koningsblauw(Proof/Checking), bordeaux(Unsatisfiability), paars(Step)
+
+**Analysis:** Well-executed interactive title that establishes the four key concepts.
+
+### 2. Motivation (3 animations) 
+**Current State:**
+- Title: "Constraint Programming (CP)" in bosgroen
+- Animation 0: "Paradigm for modeling and solving optimization problems"
+- Animation 1: Healthcare example setup + SVG figure (grid layout)
+- Animation 2: Resource requirements details
+- Animation 3: Cumulative constraint explanation
+- Has three alternative approaches (A/B/C) via toggle variable
+
+**Analysis:** Good concrete example with visual. However, lacks the bridge to "why proof checking matters."
+
+### 3. Challenge (4 animations) - NEW SLIDE
+**Current State:**
+- Animation 0: "CP solvers are complex and make mistakes"
+- Animation 1: Focus on "impossible"/optimal claims with bordeaux highlighting
+- Animation 2: Audience interaction question about checking difficulty
+- Animation 3: Answer explaining proof of unsatisfiability
+
+**Analysis:** Strong interactive slide that builds audience engagement and establishes the core problem.
+
+### 4. Research Question (2 animations)
+**Current State:**
+- Animation 0: "Why Individual Steps?" explanation
+- Animation 1: Main research question about formally verified checkers
+
+**Analysis:** Good logical flow from justification to question.
+
+### 5. Our Approach (2 animations)
+**Current State:**
+- Grid layout: Focus (left) vs Method (right)
+- Focus: Individual proof steps, two key constraints (Alldifferent, Cumulative)
+- Method: Machine-checked proofs using Rocq theorem prover
+
+**Analysis:** Clear approach overview with good visual separation.
+
+### 6. Contributions Overview (2 animations)
+**Current State:**
+- Animation 0: "Systematic foundation for CP-native proof checking"
+- Animation 1: Three pillars (Theory, Implementation, Verification)
+
+**Analysis:** Good high-level summary before diving into details.
+
+### 7. Perforated Intervals (5 animations)
+**Current State:**
+- Grid layout: Concept development (left) vs Visual example (right)
+- Progressive building: Applications → Challenge → Solution → Example → Tightness Theory
+- Mathematical notation with Svelte curly brace escaping
+
+**Analysis:** Complex theoretical slide with good visual balance.
+
+### 8. Proof Step Types (3 animations)
+**Current State:**
+- Animation 0: Introduction to two types
+- Animation 1: Inferences (bosgroen)
+- Animation 2: Deductions (koningsblauw)
+- Still uses technical terms "Inferences" and "Deductions"
+
+**Analysis:** Contains jargon that was removed from Research Question slide but remains here.
+
+### 9. Constraint Checkers (3 animations)
+**Current State:**
+- Animation 0: Introduction
+- Animation 1: Alldifferent (bosgroen)
+- Animation 2: Cumulative (oranje)
+- Minimal implementation details
+
+**Analysis:** Good high-level overview of concrete achievements.
+
+### 10. Achievements (3 animations)
+**Current State:**
+- Pyramid structure: Theory → Implementation → Verification
+- Three specific checkers: Deduction, Alldifferent, Cumulative
+- Final emphasis on "Systematic foundation"
+
+**Analysis:** Good hierarchical summary of contributions.
+
+### 11. Future Work (2 animations)
+**Current State:**
+- Animation 0: Current challenge (high verification effort)
+- Animation 1: Next steps vs Big opportunity (grid layout)
+
+**Analysis:** Balanced presentation of limitations and opportunities.
+
+### 12. Summary (2 animations)
+**Current State:**
+- Animation 0: Main achievement + three pillars
+- Animation 1: Credits with full title
+
+**Analysis:** Comprehensive closure slide.
+
+---
+
+## COMPARISON WITH PRESENTATION NOTES:
+
+### DISCREPANCIES FOUND:
+1. **Outdated slide count**: Notes mention 12 slides, but Challenge slide was added, making it 12 slides
+2. **Motivation animations**: Notes say 5 animations, but current slide has 3 animations
+3. **Challenge slide missing**: Notes don't mention the new Challenge slide
+4. **Jargon inconsistency**: Notes mention removing "inferences/deductions" from Research Question, but these terms remain in Proof Step Types slide
+5. **Old CP Challenge reference**: Notes still reference "CPChallenge" which was replaced by "Challenge"
+
+---
+
+## CRITICAL GAPS IDENTIFIED FROM THESIS CONTENT:
+
+### 1. **Missing Methodology Contribution**
+**Gap:** The slides don't mention the "conflict types methodology" which is a major contribution.
+**From thesis:** "The development of a methodology for developing propagator inference checkers... studying the conflict types of a particular propagation algorithm"
+**Impact:** This is presented as the first main contribution but is completely absent from slides.
+
+### 2. **Insufficient Context for "Individual Steps"**
+**Gap:** The audience may not understand WHY checking individual steps is harder than checking whole proofs.
+**From thesis:** Proofs consist of sequences of steps that can depend on previous steps, requiring global state management.
+**Impact:** The research question motivation could be stronger.
+
+### 3. **Missing SAT Context** 
+**Gap:** No mention of SAT solver success story that motivated this work.
+**From thesis:** "This approach, known as proof logging, has already seen great success in SAT solvers... up to the point where it is now mandatory to participate in competitions"
+**Impact:** Audience may not appreciate the significance or precedent.
+
+### 4. **Missing LCG Context**
+**Gap:** No mention of Lazy Clause Generation paradigm that modern CP solvers use.
+**From thesis:** "Many modern CP solvers are based on the lazy clause generation (LCG) paradigm"
+**Impact:** Technical audience may expect this important context.
+
+### 5. **Unclear Hall's Theorem Connection**
+**Gap:** Achievements slide mentions "Hall's theorem" without explanation.
+**From thesis:** Alldifferent checker "uses Hall's theorem to determine whether an alldifferent constraint is unsatisfiable"
+**Impact:** This is a significant technical achievement that's unclear.
+
+### 6. **Missing Timetable Specification**
+**Gap:** Cumulative constraint explanation is too general.
+**From thesis:** Work focuses specifically on "timetable cumulative" reasoning.
+**Impact:** May seem less focused than it actually is.
+
+---
+
+## IMPROVEMENT RECOMMENDATIONS:
+
+### IMMEDIATE FIXES:
+
+1. **Update Presentation Notes**
+   - Correct slide count and animation counts
+   - Document new Challenge slide
+   - Update slide order to reflect Challenge replacement
+
+2. **Standardize Jargon Usage**
+   - Either use "Inferences/Deductions" consistently or replace in Proof Step Types
+   - Consider "Reasoning Steps" and "Fact Combination" as alternatives
+
+3. **Add Methodology Slide**
+   - New slide after Perforated Intervals explaining conflict types methodology
+   - This is a major missing contribution
+
+### CONTENT ENHANCEMENTS:
+
+4. **Strengthen Challenge Slide**
+   - Add brief mention of SAT solver success: "SAT solvers solved this - now mandatory in competitions"
+   - Mention LCG-based CP solvers as context
+
+5. **Improve Individual Steps Justification**
+   - Add animation showing dependency chains between steps
+   - Explain global state management challenge
+
+6. **Clarify Technical Achievements**
+   - Briefly explain Hall's theorem role in alldifferent
+   - Specify "timetable reasoning" for cumulative
+   - Add one sentence about conflict types in relevant slides
+
+### STRUCTURAL IMPROVEMENTS:
+
+7. **Add Methodology Slide (New Slide 8)**
+   ```
+   Title: "Our Methodology"
+   Content: Conflict types approach for developing checkers
+   Animation 1: Traditional approach (check specific results)
+   Animation 2: Our approach (check conflict types)
+   Animation 3: Benefits (easier verification, more general)
+   ```
+
+8. **Split Achievements into Two Slides**
+   - Slide A: Theory + Methodology contributions
+   - Slide B: Implementation contributions (three checkers)
+   - This prevents overcrowding and highlights methodology
+
+9. **Add Brief SAT Success Context**
+   - In Challenge slide, add one sentence about SAT competitions
+   - Positions CP work as natural evolution
+
+### VISUAL IMPROVEMENTS:
+
+10. **Perforated Intervals Enhancement**
+    - Consider animated visualization of holes concept
+    - Currently quite abstract for general audience
+
+11. **Research Question Visual**
+    - Add simple diagram showing proof step dependencies
+    - Makes "individual steps" concept more concrete
+
+12. **Proof Step Types Clarity**
+    - Add visual examples or icons
+    - Currently very text-heavy
+
+### TIMING CONSIDERATIONS:
+
+13. **Animation Pacing**
+    - Challenge slide has 4 animations - might be too many for time constraints
+    - Consider combining animations 2-3 if time is limited
+
+14. **Technical Depth Balance**
+    - Perforated Intervals might be too detailed for general audience
+    - Consider moving technical details to appendix if time-pressed
+
+---
+
+## MISSING ELEMENTS FROM THESIS:
+
+1. **Formal Verification Burden Discussion**: Thesis mentions significant verification effort, but slides downplay this challenge
+2. **Rocq Findings**: Thesis has a section on Rocq experiences, but slides don't mention lessons learned
+3. **Extensibility Emphasis**: Thesis emphasizes making checker extensible, but slides could stress this more
+4. **Empirical Evaluation Gap**: Thesis acknowledges lack of empirical evaluation - might be worth brief mention
+5. **Performance vs. Trust Trade-off**: Thesis discusses this important consideration
+
+---
+
+## AUDIENCE CONSIDERATIONS:
+
+- **General Academic Audience**: May need more context about CP vs SAT, LCG paradigm
+- **CP Specialists**: May expect more technical depth about timetable reasoning, Hall's theorem
+- **Formal Methods Audience**: May want to hear more about Rocq verification challenges
+- **Industry Audience**: May care more about practical implications and performance
+
+The presentation currently strikes a good balance but could benefit from the methodology slide addition and clearer technical specifications where appropriate.

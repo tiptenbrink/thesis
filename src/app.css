@@ -2,13 +2,40 @@
 
 @theme {
     --color-tudelft: #00A6D6;
-    --text-present-xs: 1vw;
-    --text-present-sx: 1.25vw;
-    --text-present-small: 1.5vw;
-    --text-present: 2vw;
-    --text-present-large: 2.5vw;
-    --text-present-xl: 3vw;
-    --text-present-title: 3.75vw;
+    
+    /* Presentation Text Size System (6 sizes total) */
+    --text-present-xs: 1vw;         /* Minimal details, footnotes */
+    --text-present-small: 1.5vw;    /* Supporting details, captions */
+    --text-present: 2vw;            /* Body text, standard content */
+    --text-present-large: 2.5vw;    /* Section headers, important content */
+    --text-present-xl: 3vw;         /* Slide titles, major headings */
+    --text-present-hero: 4vw;       /* Special emphasis, title components */
+    
+    --color-donkerblauw: oklch(0.2553 0.0621 255.53);
+    --color-donkerblauw-muted: oklch(0.3253 0.0248 255.53);
+    --color-turkoois: oklch(0.7145 0.1222 205.82);
+    --color-turkoois-muted: oklch(0.7845 0.0489 205.82);
+    --color-koningsblauw: oklch(0.5514 0.1465 247.46);
+    --color-koningsblauw-muted: oklch(0.6214 0.0586 247.46);
+    --color-paars: oklch(0.4031 0.1580 324.06);
+    --color-paars-muted: oklch(0.4731 0.0632 324.06);
+    --color-roze: oklch(0.6893 0.1878 354.01);
+    --color-roze-muted: oklch(0.7593 0.0751 354.01);
+    --color-bordeaux: oklch(0.4587 0.1834 15.40);
+    --color-bordeaux-muted: oklch(0.5287 0.0734 15.40);
+    --color-rood: oklch(0.6019 0.2024 28.59);
+    --color-rood-muted: oklch(0.6719 0.0810 28.59);
+    --color-oranje: oklch(0.6751 0.1732 36.67);
+    --color-oranje-muted: oklch(0.7451 0.0693 36.67);
+    --color-geel: oklch(0.8277 0.1667 79.60);
+    --color-geel-muted: oklch(0.8977 0.0667 79.60);
+    --color-groen: oklch(0.7344 0.1772 137.94);
+    --color-groen-muted: oklch(0.8044 0.0709 137.94);
+    --color-groen-muted-light: oklch(0.8044 0.0709 137.94 / 20%);
+    --color-bosgroen: oklch(0.6128 0.1228 168.91);
+    --color-bosgroen-muted: oklch(0.6828 0.0491 168.91);
+    --color-donkergrijs: oklch(0.4748 0.0000 0);
+    --color-donkergrijs-muted: oklch(0.5448 0.0000 0);
 }
 
 :root {

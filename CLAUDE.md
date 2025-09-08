@@ -2,14 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Development Commands
-
-- `pnpm dev` - Start development server with hot reloading
-- `pnpm build` - Build for production
-- `pnpm preview` - Preview production build locally
-- `pnpm check` - Run Svelte type checking
-- `pnpm check:watch` - Run Svelte type checking in watch mode
-
 **Important**: Always use `pnpm`, never `npm`.
 
 ## Project Architecture
@@ -60,3 +52,9 @@ This is a SvelteKit presentation application that displays slides with animation
 ### Styling
 
 Uses Tailwind CSS v4 with custom presentation-specific font classes and TU Delft branding (tudelft.svg background).
+- Always use the presentation notes to guide how slides should look like, feel free to update them if a slide becomes to tall, because there is only limited vertical space. Always summarize instructions and update presentation notes with generalizable lessons.
+- Never use text-xl or similar for text size. Only use a limited set of global tailwind variables defined in app.css, so they can be changed if needed.
+
+### How to make changes
+
+First, make a todo list. Break down which slides must be edited. Try to work out the plan in more detail. Record this in `update.md`. You can always replace whatever was there previously. Then, execute the plan. Once you are done, compare what you have done with `update.md` and summarize your changes. Then, update `presentation-notes.md`, which is a complete overview of all design decisions and content for each slide, so that it is fully up to date. Furthermore, if there is anything in `finalpresentation.md` that is not clear in the presentation, mention that. 
