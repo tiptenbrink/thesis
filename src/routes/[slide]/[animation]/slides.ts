@@ -2,7 +2,9 @@ import type { Component } from "svelte"
 import * as Title from "$lib/client/slides/Title.svelte";
 import * as Motivation from "$lib/client/slides/Motivation.svelte";
 import * as Challenge from "$lib/client/slides/Challenge.svelte";
+import * as StepDetails from "$lib/client/slides/StepDetails.svelte";
 import * as ResearchQuestion from "$lib/client/slides/ResearchQuestion.svelte";
+import * as TrustAndVerification from "$lib/client/slides/TrustAndVerification.svelte";
 import * as OurApproach from "$lib/client/slides/OurApproach.svelte";
 import * as ContributionsOverview from "$lib/client/slides/ContributionsOverview.svelte";
 import * as PerforatedIntervals from "$lib/client/slides/PerforatedIntervals.svelte";
@@ -23,9 +25,11 @@ export const slides: SlideModule[] = [
     Title,
     Motivation,
     Challenge,
+    StepDetails,
     ResearchQuestion,
-    OurApproach,
     ContributionsOverview,
+    TrustAndVerification,
+    OurApproach,
     PerforatedIntervals,
     ProofStepTypes,
     ConstraintCheckers,

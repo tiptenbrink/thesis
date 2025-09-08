@@ -9,12 +9,14 @@
 - **text-present-hero** (4vw): Special emphasis, title components
 
 ## SEMANTIC COLOR SYSTEM (TU Delft Brand Colors):
-- **koningsblauw** (blue): "Proof" and "Checking" semantic connection
-- **paars** (purple): Main emphasis like "Step" 
-- **bosgroen** (green): "Constraint Programming"
+- **koningsblauw** (blue): "Proof" and "Checking" semantic connection - use for proof/verification concepts
+- **paars** (purple): "Step" semantic connection - use for individual steps, methodology concepts
+- **bosgroen** (green): "Constraint Programming" semantic connection
 - **bordeaux** (red): "Unsatisfiability", problems, gaps
 - **donkergrijs-muted** (gray): De-emphasized content
 - All colors have -muted variants for reduced emphasis
+
+**CRITICAL RULE**: Always use semantic colors that match the title slide concepts. When referring to proof checking → use koningsblauw, when referring to steps → use paars, etc.
 
 ## CRITICAL DESIGN PRINCIPLES:
 - **1.7:1 aspect ratio** - extremely limited vertical space
@@ -25,7 +27,7 @@
 ## SLIDE STRUCTURE:
 
 ### 1. Title Slide
-- 5 animations highlighting key components: CP → Proof Checker → Unsatisfiability → Step
+- 6 animations highlighting key components: CP → Proof Checker → Unsatisfiability → Step
 - Uses TU Delft colors with gray highlighting backgrounds
 
 ### 2. Motivation  
@@ -33,39 +35,47 @@
 - Grid layout with SVG figure on right side
 
 ### 3. Challenge
-- Solver complexity and error potential  
-- Focus on unsatisfiability claims
-- Audience interaction: why harder to check than solutions
-- Introduces proof of unsatisfiability concept
+- 6 animations with solver complexity and progressive solution reveal
+- Focus on unsatisfiability claims with audience interaction
+- Introduces proof checking concept
 
-### 4. Research Question
-- Why individual steps are necessary
-- Main research question
+### 4. Step Details
+- Explain what "Step" means in context of the title
+- Show three components from title + the missing piece
+- Avoid jargon, focus on structure
 
-### 5. Our Approach
-- Our focus: individual proof steps, key constraints
-- Our method: machine-checked proofs in Rocq
+### 5. Research Question
+- Main research question (initially without "formally verified")
+- Reveal "formally verified" after contributions
 
 ### 6. Contributions Overview
 - Three pillars: Theory, Implementation, Verification
 
-### 7. Perforated Intervals
+### 7. Trust & Formal Verification
+- Explain why "formally verified" is necessary
+- Trust requirements for proof checking
+
+### 8. Our Approach
+- Our focus: individual proof steps, key constraints
+- Our method: machine-checked proofs in Rocq
+
+### 9. Perforated Intervals
 - Theoretical contribution details
 
-### 8. Proof Step Types  
+### 10. Proof Step Types  
 - Two types of proof steps
 
-### 9. Constraint Checkers
+### 11. Constraint Checkers
 - Implementation examples
 
-### 10. Achievements
+### 12. Achievements
 - Summary of contributions
 
-### 11. Future Work
+### 13. Future Work
 - Limitations and research directions
 
-### 12. Summary
+### 14. Summary
 - Final overview and credits
 
-## CURRENT STATUS: ✅ STRUCTURE DEFINED
+## CURRENT STATUS: ✅ STRUCTURE UPDATED
 All slides use TU Delft colors and global CSS variables exclusively.
