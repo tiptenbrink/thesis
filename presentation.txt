@@ -1,0 +1,73 @@
+== Final presentation
+
+"Proof step checking in a formally verified constraint programming unsatisfiability proof checker"
+
+=== Motivation
+
+Optimization is everywhere. We humans do it all the time. Often, it's quite qualitative. Like: finding the best restaurant to eat at. Or what movie to watch. Sometimes, it's more quantitative. What route should you take to minimize the travel time? What insurance has the lowest cost?
+
+Whenever we can frame the question in terms of some number that we either want to minimize or maximize, we can use computers to help us. Why? Because computers simply work much faster. They can look at billions of different possibilities every second. 
+
+However, computers do only what we tell them to do. And the programs we run on computers to solve optimization problems have gotten very complex. We want to model all kinds of problems
+
+- We don't want to give up this complexity, because then our programs would become slower
+- When we really want to be sure, we want to be able to check whether our answer was correct
+
+Today is about my contribution to this problem. 
+
+
+=== Contributions simple
+
+=== Problem description
+
+=== Contributions expanded, still simple
+
+=== Contributions more complex
+
+=== Discussion
+
+
+== Snippets
+
+=== Short description of contributions
+
+Through the development of a formally verified implementation, I have demonstrated the feasibility of a CP-native proof checker.
+
+- I have demonstrated the feasibility of a formally verified CP-native proof checker:
+  - A formally verified deduction step checker
+  - A formally verified alldifferent checker
+- I have made algorithmic/theoretical advancements:
+  - A formally verified cumulative timetable checking algorithm
+  - A formally verified domain representation using lower and upper bounds and holes: perforated intervals
+  - (Minor) A better understanding of inference checkers through _conflict types_.
+- I have reduced the development burden for supporting additional inference checkers:
+  - Inference checker methodology
+  - Domain maps, perforated intervals
+  - Utilities
+
+
+To understand?
+
+- What is constraint programming? Optimization?
+- What is formal verification?
+- What is proof checking?
+
+My thesis was titled "proof step checking in a formally verified constraint programming unsatisfiability proof checker". I don't yet expect you to understand what this all means, but you most likely immediately notice that I'm doing something with _checking_ and _verifying_.
+
+"Checking" is at the heart of what I did in the past 10 months. Even today, I am defending my work in front of the thesis committee, which in a way is _checking_ my work to see if I deserve the title of Master of Science. 
+
+In this presentation, I will detail the _what_ and the _how_ of all the checking I did in this thesis.
+
+Let us begin with the _what_, so we can understand the problem at hand. My contributions are part of a project at the TU Delft that aims to build a constraint programming unsatisfiability proof checker. So what is that?
+
+Well, the checker is a program that verifies claims made by another program: the solver. The solver solves optimization problems.
+
+Let's look at such a problem.
+
+
+
+
+
+Two main examples
+- Healthcare timetabling https://ihtc2024.github.io/#section11 https://www.sciencedirect.com/science/article/pii/S3050784725000157?ref=pdf_download&fr=RR-2&rr=97856f8a1cc99fba
+- Combinatorial equivalence checking (hardware model checking https://hwmcc.github.io/2020/hwmcc20slides.pdf)

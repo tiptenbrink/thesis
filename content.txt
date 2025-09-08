@@ -1,0 +1,105 @@
+In our modern world, optimization is everywhere. For example, in healthcare, there is the challenge of optimally scheduling scarce resources such as nurses, operating rooms, and doctors @hulshof2012healthplan. Or in circuit design, optimization is used both for designing efficient chips and for verifying them @achterberg2009scip. 
+
+One powerful paradigm for modeling and solving optimization problems is constraint programming (CP). In CP, problems are modeled using constraints that respect a problem's high-level structure. An example of such a constraint, often used in scheduling and which we study at length in this thesis, is the _cumulative constraint_ @aggoun1993cumulative. In @ex:cum:intro, we briefly discuss applying the cumulative constraint to a healthcare scheduling problem.
+
+#example[
+  In healthcare planning, doctors necessary for operations are a scarce resource. During some time window, we might have only 2 available doctors. Furthermore, there are 3 operations $a, b$ and $c$ (each of a certain duration) that must be performed, where operations $a$ and $b$ require a single doctor, while operation $c$ requires two doctors. To ensure we never schedule more doctors than we have available, we can impose a cumulative constraint on those operations with a maximum capacity of 2 (the doctors). The cumulative constraint ensures that at any particular time, the operations do not exceed the capacity. See @sec:prelim:cumulative for a formal description.
+  
+  @img:cum:ops shows a possible schedule, where we assume operation $a$ takes 1 unit of time, and operation $b$ and $c$ each take 2 units of time.
+
+  #figure(// NOTE TO CLAUDE: code omitted here, it's an image),
+  caption: [Timeline showing a possible schedule for operations $a, b, c$ that satisfies a cumulative constraint with capacity 2. The height of an operation indicates its usage, which in this case is the number of required doctors. ]
+) <img:cum:ops>
+] <ex:cum:intro>
+
+
+
+The above example primarily shows how CP can be used for modeling. We now briefly discuss the principles of CP _solving_. To find solutions, solvers interleave _inference_ (or _propagation_) with _search_. The former shrinks the search space, the latter explores it. Inference can make use of algorithms specialized for each constraint. 
+
+Modern CP solvers are applied in multiple domains and have been particularly successful in scheduling @naderi2023scheduling @dacol2022jobshop.
+However, this success is owed in large part to a combination of advanced algorithms, as well as heavy performance engineering. Solvers have a large surface area for bugs, due to the complexity this engineering inevitably brings to their implementation, as well as due to the complexity inherent in many of the algorithms used in CP.
+
+When bugs lead a solver to incorrectly declare that it has found a solution, this can be easily caught. This is because a solution can be checked if it indeed satisfies all constraints. However, when a solver declares that there is _no_ solution, i.e., that the problem is unsatisfiable, there is no simple certificate (which in the other case is the solution itself) that can be checked to verify the solver's claim. Note that a claim of optimality is equivalent to the claim that any better solution is unsatisfiable.
+
+There is great value in ensuring that solvers do not erroneously claim unsatisfiability. We highlight two important reasons:
+1. In some domains, an incorrect unsatisfiability claim is hugely problematic. For example, in circuit verification, when comparing two circuits that are supposed to have the same behavior, this means there would exist inputs for which this is not the case. 
+2. Incorrect unsatisfiability claims are often the result of subtle bugs. Effectively catching these improves the reliability of solvers, allowing them to incorporate more complex algorithms and improve performance.
+
+One avenue to eliminate erroneous unsatisfiability claims is to prove the solver's completeness @carlier2012certified, which would ensure that if a solution exists, the solver would find it. However, this is challenging, in particular without sacrificing performance. 
+
+Instead, the solver could record the steps it took to determine the unsatisfiability of a particular instance, producing a proof of unsatisfiability. This proof can then be verified by a program that is more trusted than the solver. This approach, known as proof logging, has already seen great success in SAT solvers @heule2021handbookproofs (see also @sec:satunsat), up to the point where it is now mandatory to participate in competitions @sat2013.
+
+This success has only recently been extended to CP solvers. Many modern CP solvers are based on the lazy clause generation (LCG) paradigm @feydy2009rengineered and Flippo et al. @flippo2024proof have demonstrated that such an LCG solver can be instrumented to produce unsatisfiability proofs. These proofs use a format inspired by the DRUP format @goldberg2003unsatcnf @gelder2008rup in SAT. 
+
+// One of the great strengths of CP is its support for a wide range of constraints, including so-called global constraints that can exploit a problem's global structure. CP solvers generally support using constraint-specific reasoning to reduce the search space. Ideally, this same reasoning should be able to be verified by a CP-native checker.
+
+Ideally, verifying these proofs would involve using the same powerful constraint-specific reasoning that was used to produce them. However, previous work has mostly followed the approach of encoding CP problems as simpler problems, such as SAT @veksler2010CSPprof. In the work of Flippo et al., proofs produced by the solver were translated to pseudo-Boolean proofs and verified by a pseudo-Boolean checker @gocht2022auditable. A CP-native checker, which understands the specialized reasoning performed by solvers, does not have to translate CP reasoning into more limited types of reasoning. 
+
+// Among the main strengths of CP is the ability to efficiently encode the problem with constraints that retain much of the problem's structure. Encoding this in a pseudo-Boolean model loses much of this. Furthermore, the CP proof can mention the constraint-specific reasoning that solvers employ in order to prune the search space more efficiently. When encoding into a format that does not know about these types of reasoning, verification can also not make use of this specialized reasoning.
+
+*This has led to a project to develop a formal CP proof system and CP-native proof checker @sidorov2025checker, of which this thesis is a part. We will refer to this project as _the_ CP checker project and to the checker as _the_ CP checker.*
+
+To verify proofs using specialized CP-native reasoning, this reasoning must be explicitly supported in the checker. This entirely removes the encoding step, but requires more complicated verification algorithms. This verification must be made trustworthy to the highest possible degree, as otherwise the conclusion can still be questioned. The gold standard for achieving this level of trust is a machine-checked formal proof of correctness. Therefore, the CP checker is formally verified using Rocq @rocq-8-20.
+// We note that in the case of pseudo-Boolean proofs, the verification is straightforward enough that this is not an absolute requirement.
+
+The proof format of Flippo et al. @flippo2024proof was improved and formalized as a full proof system by Sidorov et al. @sidorov2025checker for the CP proof checker project. We will refer to this proof system as _the_ CP proof system. Compared to the original proof format, it better captures the integer reasoning performed by CP solvers. Since CP solvers work by interleaving propagation and search, the proof system must also capture this. Proofs, which consist of a sequence of steps, therefore contain two types of proof steps:
+- _inferences_: which capture a particular type of reasoning performed by the solver (usually over a particular constraint).
+- _deductions_: which combine different facts into new facts. These combined facts correspond to how modern LCG solvers perform search.
+
+A proof in the CP proof system always makes a certain claim. In this thesis, we consider only an unsatisfiability claim in this thesis. This claim is valid if all steps of the proof are valid and the final step supports the claim. Steps can depend on previous steps. Therefore, verifying the proof requires keeping some kind of global state. Furthermore, the final step requires special attention to see if the claim is indeed correct.
+
+As a first step, it is natural to disregard these complexities and focus only on the _individual_ proof steps. This gives rise to the main research question of this thesis: *How can we develop formally verified checkers for individual proof steps in a CP unsatisfiability proof checker?* Our contribution is then to determine how to check these individual steps using formally verified algorithms, leaving the remaining concerns for the CP proof checker project to solve.
+
+We do not consider all possible proof steps. Inference proof steps can be separated into two categories: inferences that correspond to a particular type of CP propagation algorithm (propagator inferences), and inferences that are more general-purpose. The latter category includes inferences that rewrite previously deduced facts as well as inferences that bring a variable's initial domain into the context. This work only focuses on the first category, i.e., propagator inferences. 
+
+We do not aim to be able to verify all types of propagator inferences. Instead, we restrict ourselves to two popular constraints, alldifferent and (timetable) cumulative. This allows us to demonstrate the feasibility of developing inference checkers. Furthermore, this allows us to establish a general methodology that can be applied to other constraints to ease their checker implementations and allow the checker to be extended in the future. 
+
+// For the deduction step, however, we do not develop a general methodology, as it is independent of the constraint type and is fully general. Instead, we simply present its implementation and formalization. 
+
+Furthermore, we introduce a theory and formalization of perforated intervals, which is pivotal in the implementation and formalization of both inference and deduction checking. Perforated intervals are a representation of (potentially infinite) subsets of $ZZ$, which are used to describe variable domains. They consist of (optional) bounds and a set of holes. We describe the operations that can be performed on perforated intervals and under what conditions these can be performed efficiently. These operations and properties are all formally verified. 
+
+Finally, we present some findings of working with Rocq, which is the interactive theorem prover and programming language used for the implementation of the checker.
+
+An outline of the structure of this thesis is provided next. 
+- @sec:background introduces the necessary background for understanding our approach and results. This includes a description of the proof system and checker used in this thesis, which are being developed concurrently by Sidorov et al. @sidorov2025checker.
+- @sec:relatedwork describes the related work.
+- Our general approach is described in @sec:approach. In particular, we describe the difference between handling deductions and propagator inferences and exactly which proof steps are considered in this work. 
+Then we describe our contribution in 6 top-level sections: 
+- *@sec:methodology)* methodology for developing formally verified propagator inference checking algorithms;
+- *@sec:perfint)* the formalization and implementation of a theory for converting atomic constraints into a holes-based domain representation (termed perforated intervals). This is foundational to all the other results in this thesis
+- *@sec:deduct)* the implementation and formalization of the fact deduction procedure (@proc:deduct), which also discusses maps of variable domains
+- *@check:alldiff)* an alldifferent checker capable of verifying inferences for alldifferent constraints where the premises are without redundancy
+- *@check:cumul)* a checker capable of verifying inferences for cumulative constraints that are derived using timetable reasoning; 
+- *@sec:rocq)* general findings for working in Rocq in the context of constraint programming. 
+
+Having described our results, we discuss them in @sec:discussion, where we also mention possible future work. This is followed by an extended summary in @sec:conclusion.
+
+= Conclusion (extended summary) <sec:conclusion>
+
+Constraint Programming (CP) solvers have a propensity for bugs due to their use of performance engineering and complex algorithms. This reduces trust in their results, which are hard to check in the case of optimality or unsatisfiability claims. Logging and checking proofs is a promising way to remedy this by allowing optimality and unsatisfiability claims to be verified. 
+
+Previous work showed that it is possible to instrument state-of-the-art solvers to produce proofs of unsatisfiability. However, there does not yet exist a way to verify this reasoning in a CP-native fashion. Instead, existing methods require the encoding of models into more restricted formats and explaining reasoning in terms of simpler reasoning. This results in potentially larger proofs. Furthermore, it can be difficult to explain some types of reasoning in these simpler languages. 
+
+This work is a part of a project to improve this by developing an end-to-end CP-native proof system and proof checker. To achieve the highest possible trust, given the fact that verification requires reasoning of a similar strength to solvers, the CP proof checker is formally verified in Rocq to be sound: when it accepts a proof, we know the proof's claim to be correct. Proofs in the CP proof system consist of a sequence of individual proof steps, each of which must be individually verified. This work asks _how formally verified checkers for individual proof steps can be developed_. This is challenging because one of the main proof step types -- propagator inferences -- can use any type of CP reasoning. Consequently, supporting a new constraint or propagator requires the implementation of a dedicated inference checker.
+
+Our work makes the following main contributions:
+
+- The development of a methodology for developing propagator inference checkers: This methodology guides the creation of a checker by studying the _conflict types_ of a particular propagation algorithm for a particular constraint, as we find (building on previous work) that checking conflicts is easier than checking specific propagation results.  
+- A formalized theory and implementation of perforated intervals: perforated intervals are a domain representation consisting of bounds and holes, and support efficient check and update operations. The development also includes theoretical results that tell us under what conditions these check and update conditions are efficient and through what operation this condition (_tightness_) can be achieved. This includes formal proofs that go beyond the soundness claims necessary for the proof checker. Perforated intervals can be used to reason over domains instead of atomic constraints for inference checkers. They also form the core of the _deduction step_, which is the other main proof step type we consider.
+- Deduction allows deriving new facts from previous ones. Deduction steps correspond to the learned nogoods found by learning CP solvers. Checking the deduction step requires careful tracking of variable domains using domain maps, which build on perforated intervals. We present a fully formalized implementation with a correctness proof that is abstracted from its implementation details.
+- A formally verified algorithm for checking inferences made by a timetable propagator for the cumulative constraint. This checker checks two different conflict types, as identified by the methodology of our first contribution. This non-trivial checker serves as an example for future inference checkers and demonstrates that our methodology works. It is based on a simplified propagator that considers individual timepoints, which leaves room for further optimization.
+- A formally verified checker for alldifferent that can catch all valid alldifferent propagations, as long as inference proof steps contain no redundant information. This checker uses Hall's theorem to determine whether an alldifferent constraint is unsatisfiable. As the checker has a powerful tool (Hall's theorem) to understand the possible conflicts, it does not need our inference checker methodology.
+- Findings about the usage of Rocq, which is the language and proof assistant used to implement and verify the CP proof checker. In particular, we find two types of proof segments: conceptual proofs and implementation-coupled proofs. We successfully tested this hypothesis by decoupling the two types in our alldifferent checker.
+
+Our work is a significant step towards achieving a formally verified CP proof checker that is capable of directly verifying CP and integer reasoning, while also making theoretical contributions through the theory of perforated intervals. Our proposed methodology should make the checker extensible, as should our perforated intervals and library of utilities. 
+
+In particular, our methodology advances our goal by tackling the checking algorithms, while perforated intervals and our examples advance the formal verification part of it. However, there are some important limitations. 
+- First of all, we identify a significant formal verification burden, which we were not able to alleviate with automation. Our proposed inference checker methodology also provides no guidance on formal verification, focusing instead only on developing the checking algorithm. 
+- We see that the approach adopted by the CP proof system used in this work increases this burden compared to earlier approaches for CP unsatisfiability proofs (that encode the problem in a more limited language, such as pseudo-Boolean constraints) by requiring a formally verified checker for every type of inference. However, the CP proof system has the major benefit that less conceptual work is required to translate propagation algorithms and constraint models, as they can be supported directly and do not have to be translated to reasoning in more limited languages. 
+- Finally, this work lacks an empirical evaluation, as the proof checker is still missing important components. This complicates judging our work's practical implications. However, this is expected to be addressed in upcoming work by the CP prof checker project.
+
+We see multiple avenues to further improve our work. 
+- First of all, our proposed methodology could be improved by developing guidance for the formal verification of checkers for conflict types. This would significantly advance our goal of how to develop _formally verified_ proof step checkers. 
+- Next, multiple performance improvements are possible, in particular for cumulative by not considering all timepoints and for alldifferent by computing the domain union more efficiently. 
+- Adding support for new constraints will also advance our understanding of inference checking by providing additional examples and testing our methodology. 
+- Finally, a large conceptual improvement to inference checking could be made by investigating support for richer _hints_ to the proof system. These hints can tell the inference checkers "where to look". In the case of cumulative, this would be especially helpful for conflict inferences, providing significant speedups.

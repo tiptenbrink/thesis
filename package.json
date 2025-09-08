@@ -28,6 +28,7 @@
 	},
 	"pnpm": {
 		"onlyBuiltDependencies": [
+			"@tailwindcss/oxide",
 			"esbuild",
 			"lmdb",
 			"msgpackr-extract"

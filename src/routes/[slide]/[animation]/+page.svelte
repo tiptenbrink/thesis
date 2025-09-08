@@ -1,67 +1,16 @@
 <script module lang="ts">
-    import type { Component } from "svelte";
-  import * as Slide from "../../Slide.svelte";
-  import * as Slide2 from "../../Slide2.svelte";
-    import type { PageProps } from "./$types";
-    import { goto, preloadData } from "$app/navigation";
-
-  type SlideComponent = Component<{ animation: number }>
-
-  interface SlideModule {
-    animations: number,
-    default: Component<{ animation: number }>
-  }
-
-  const slides: SlideModule[] = [
-    Slide, 
-    Slide2
-  ]
-
-  function slidePositions(slides: SlideModule[]): number[] {
-    let start = 0
-    const starts = [0]
-    for (const slide of slides) {
-      start += slide.animations
-      starts.push(start)
-    }
-
-    return starts
-  }
-
+  import type { PageProps } from "./$types";
+  import { goto, preloadData } from "$app/navigation";
+  import { slides, type SlideComponent } from "./slides"
+  
   const slideComponents: SlideComponent[] = slides.map(s => s.default)
   const slideAnimations: number[] = slides.map(s => s.animations)
-  const positions = slidePositions(slides)
-  const end = positions.at(-1)!
-
-  function binaryNext(above: number, below: number): number {
-    return Math.floor((below - above) / 2)
-  }
-
-  function getSlide(positions: number[], pos: number): [number, number] {
-    let i = positions.length
-    let above = 0
-    let below = i
-    let current = binaryNext(above, below) 
-    while (i > 0) {
-      i -= 1
-      if (pos === positions[current]) {
-        return [current, 0]
-      } else if (pos < positions[current]) {
-        below = current
-        current = binaryNext(above, below)
-      } else {
-        above = current
-        current = binaryNext(above, below)
-      }
-    }
-    return [above, pos - positions[above]]
-  }
 
   function nextPos(slide: number, animation: number): [number, number] {
     if (animation + 1 < slideAnimations[slide]) {
       return [slide, animation + 1]
     } else if (slide + 1 < slides.length) {
-      return [slide + 1, animation]
+      return [slide + 1, 0]
     } else {
       return [slide, animation]
     }
@@ -80,10 +29,6 @@
 </script>
 
 <script lang="ts">
-  //let position = $state(0)
-  //let slideAnim = $derived(getSlide(positions, position))
-  //let slide = $derived(slideAnim[0])
-  //let animation = $derived(slideAnim[1])
   let data: PageProps = $props()
   let animation = $derived(parseInt(data.params.animation))
   let slide = $derived(parseInt(data.params.slide))
@@ -94,13 +39,17 @@
   let prevLink = $derived(`/${prev[0]}/${prev[1]}`)
   let nextLink = $derived(`/${next[0]}/${next[1]}`)
 
+  let prevSlideLink = $derived(`/${Math.max(0, slide-1)}/0`)
+  let nextSlideLink = $derived(`/${Math.min(slide+1, slides.length-1)}/0`)
+
   $effect(() => {
     preloadData(prevLink)
     preloadData(nextLink)
+    preloadData(prevSlideLink)
+    preloadData(nextSlideLink)
   })
 
   function handleKeyDown(event: KeyboardEvent) {
-    // TODO, invalidate?
     if (event.key === 'ArrowRight' || event.key === 'PageDown' || event.key === 'ArrowDown') {
       goto(nextLink, {
         keepFocus: true
@@ -109,26 +58,32 @@
       goto(prevLink, {
         keepFocus: true,
       })
+    } else if (event.key === 'a') {
+      goto(prevSlideLink)
+    } else if (event.key === 'd') {
+      goto(nextSlideLink)
     }
   }
 </script>
 
-positions={JSON.stringify(positions)};end={end}
-<br>
-<!-- position={position} -->
-<br>
-slide={slide};animation={animation}
-<br>
-<!-- incr: <button onclick={() => position += 1}>Incr</button> <button onclick={() => position -= 1}>Decr</button> -->
-
-
-<Visible {animation} />
-
-
-<br>
-<div>
-<a href={`/${prev[0]}/${prev[1]}`}>Left</a>
-<a href={`/${next[0]}/${next[1]}`}>Right</a>
-</div>
-
 <svelte:window onkeydown={(event) => handleKeyDown(event)} />
+
+<!-- incr: <button onclick={() => position += 1}>Incr</button> <button onclick={() => position -= 1}>Decr</button> -->
+<div class="bg-gray-white flex flex-col justify-center w-dvw h-dvh font-[Zilla_Slab]">
+  <div class="w-full h-auto aspect-video bg-cover bg-no-repeat bg-[url(/tudelft.svg)] grid grid-rows-[1fr_10fr_2fr]">
+  <div class=""></div>
+  <div class="bg-white">
+    <div class="grid grid-cols-[2fr_12fr_2fr] w-full h-full">
+      <div class="bg-gray-white"></div>
+      <div class="contents"><Visible {animation} /></div>
+      <div class="bg-gray-white"></div>
+    </div>
+  </div>
+  <div class="grid grid-cols-[25fr_1fr_1fr_1fr_25fr] pt-4 text-present-small">
+    <span></span>
+    <span>{slide+1}</span>
+    <span>/</span>
+    <span>{slides.length}</span>
+    <span></span></div>
+  </div>
+</div>

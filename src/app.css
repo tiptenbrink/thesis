@@ -1,1 +1,17 @@
 @import 'tailwindcss';
+
+@theme {
+    --color-tudelft: #00A6D6;
+    --text-present-xs: 1vw;
+    --text-present-sx: 1.25vw;
+    --text-present-small: 1.5vw;
+    --text-present: 2vw;
+    --text-present-large: 2.5vw;
+    --text-present-xl: 3vw;
+    --text-present-title: 3.75vw;
+}
+
+:root {
+    --present-bullet-margin: 0.5rem;
+    --box-margin: 1rem;
+}
