@@ -1,5 +1,5 @@
 <script module>
-  export const animations = 4
+  export const animations = 3
 </script>
 <script lang="ts">
   let props: { animation: number } = $props()
@@ -13,46 +13,33 @@
     <!-- Version A: Structure-first approach -->
     <h1 class="text-present-xl font-bold text-center mb-6 text-paars">What is a Step?</h1>
     
-    <div class="space-y-4">
+    <div class="flex flex-col justify-center h-full space-y-6">
       {#if props.animation >= 0}
-        <div class="text-center mb-4">
-          <p class="text-present-large">From our title, we have three components:</p>
-        </div>
-        
         <div class="grid grid-cols-3 gap-6">
-          <div class="p-3 bg-green-100 rounded-lg text-center">
+          <div class="p-4 bg-green-100 rounded-lg text-center flex items-center justify-center h-16">
             <p class="text-present font-bold text-bosgroen">Constraint Programming</p>
           </div>
-          <div class="p-3 bg-blue-100 rounded-lg text-center">
+          <div class="p-4 bg-blue-100 rounded-lg text-center flex items-center justify-center h-16">
             <p class="text-present font-bold text-koningsblauw">Proof Checking</p>
           </div>
-          <div class="p-3 bg-red-100 rounded-lg text-center">
+          <div class="p-4 bg-red-100 rounded-lg text-center flex items-center justify-center h-16">
             <p class="text-present font-bold text-bordeaux">Unsatisfiability</p>
           </div>
         </div>
       {/if}
       
       {#if props.animation >= 1}
-        <div class="text-center">
-          <p class="text-present">But what about the fourth component?</p>
-        </div>
-        
-        <div class="p-4 bg-purple-100 rounded-lg text-center">
-          <p class="text-present-large font-bold text-paars">Step</p>
-          <p class="text-present-small text-donkergrijs-muted mt-2">The missing piece</p>
+        <div class="flex justify-center">
+          <div class="p-4 bg-purple-100 rounded-lg text-center flex items-center justify-center h-16 w-64">
+            <p class="text-present font-bold text-paars">Step</p>
+          </div>
         </div>
       {/if}
       
       {#if props.animation >= 2}
-        <div class="p-4 bg-purple-50 rounded-lg text-center">
-          <p class="text-present font-semibold text-paars">Proofs have structure:</p>
-          <p class="text-present-small mt-1">Sequence of steps that build on each other</p>
-        </div>
-      {/if}
-      
-      {#if props.animation >= 3}
         <div class="text-center">
-          <p class="text-present text-donkergrijs-muted">Each step must be checked individually for trust</p>
+          <p class="text-present-small">Project collaboration:</p>
+          <p class="text-present-small"><strong>Maarten Flippo, Konstantin Sidorov, Emir Demirović</strong></p>
         </div>
       {/if}
     </div>

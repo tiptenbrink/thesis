@@ -12,8 +12,8 @@
     <!-- Main achievement - more compact -->
     <div class="text-center mb-6">
       <div class="p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-        <p class="text-present-large text-koningsblauw font-bold mb-2">Systematic Foundation for CP-Native Proof Checking</p>
-        <p class="text-present-small text-donkergrijs">Theoretical framework + working implementations + formal verification</p>
+        <p class="text-present-large text-koningsblauw font-bold mb-2">Demonstrated feasibility of formally verified CP unsatisfiability checker</p>
+        <p class="text-present-small text-donkergrijs">Two constraints + deduction step + methodology + domain theory</p>
       </div>
     </div>
     

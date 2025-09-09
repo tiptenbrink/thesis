@@ -38,11 +38,15 @@ This is a SvelteKit presentation application that displays slides with animation
 
 ### Adding New Slides
 
-1. Create new slide component in `src/lib/client/slides/` with required module script:
+1. Create new slide component in `src/lib/client/slides/` with required module script and props (these must always be present!):
    ```svelte
    <script module>
      export const animations = 1  // Number of animation steps (minimum 1)
    </script>
+   <script lang="ts">
+     let props: { animation: number } = $props()  // The current animation state variable, 0-indexed
+   </script>
+
    ```
 2. Import and add to slides array in `src/routes/[slide]/[animation]/slides.ts`:
    ```typescript

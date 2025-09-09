@@ -4,9 +4,10 @@ import * as Motivation from "$lib/client/slides/Motivation.svelte";
 import * as Challenge from "$lib/client/slides/Challenge.svelte";
 import * as StepDetails from "$lib/client/slides/StepDetails.svelte";
 import * as ResearchQuestion from "$lib/client/slides/ResearchQuestion.svelte";
-import * as TrustAndVerification from "$lib/client/slides/TrustAndVerification.svelte";
-import * as OurApproach from "$lib/client/slides/OurApproach.svelte";
+import * as ContributionsIntro from "$lib/client/slides/ContributionsIntro.svelte";
 import * as ContributionsOverview from "$lib/client/slides/ContributionsOverview.svelte";
+import * as FormalVerification1 from "$lib/client/slides/FormalVerification1.svelte";
+import * as FormalVerification2 from "$lib/client/slides/FormalVerification2.svelte";
 import * as PerforatedIntervals from "$lib/client/slides/PerforatedIntervals.svelte";
 import * as ProofStepTypes from "$lib/client/slides/ProofStepTypes.svelte";
 import * as ConstraintCheckers from "$lib/client/slides/ConstraintCheckers.svelte";
@@ -27,12 +28,13 @@ export const slides: SlideModule[] = [
     Challenge,
     StepDetails,
     ResearchQuestion,
+    ContributionsIntro,
     ContributionsOverview,
-    TrustAndVerification,
-    OurApproach,
-    PerforatedIntervals,
+    FormalVerification1,
+    FormalVerification2,
     ProofStepTypes,
     ConstraintCheckers,
+    PerforatedIntervals,
     Achievements,
     FutureWork,
     Summary

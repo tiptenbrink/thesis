@@ -11,7 +11,8 @@
   <div class="space-y-4">
     {#if props.animation >= 1}
       <div class="text-center">
-        <p class="text-present-large">CP solvers are complex and make mistakes</p>
+        <p class="text-present-large">CP solvers are complex software</p>
+        <p class="text-present-small text-donkergrijs-muted mt-1">Decades of engineering + complicated algorithms</p>
       </div>
     {/if}
     
@@ -27,12 +28,17 @@
         <p class="text-present font-semibold text-oranje mb-3">Question for you:</p>
         <p class="text-present">Why is this harder to check than when we <em>do</em> get a solution?</p>
       </div>
-    {:else if props.animation >= 4}
+    {:else if props.animation === 4}
+      <div class="p-4 bg-bosgroen text-white rounded-lg text-center">
+        <p class="text-present font-semibold mb-3">Answer:</p>
+        <p class="text-present">We can just check if solution satisfies all constraints!</p>
+      </div>
+    {:else if props.animation >= 5}
       <div class="p-4 bg-koningsblauw text-white rounded-lg text-center">
-        <p class="text-present font-semibold mb-3">Solution:</p>
-        <p class="text-present">Solver records its reasoning{#if props.animation >= 5}&nbsp;= <strong>proof</strong>{/if}</p>
+        <p class="text-present font-semibold mb-2">Solution:</p>
+        <p class="text-present">Solvers record reasoning = <strong>proof</strong></p>
         {#if props.animation >= 6}
-          <p class="text-present mt-2">Then <strong>check</strong> that <strong>proof</strong></p>
+          <p class="text-present mt-2">Then check proof step by step</p>
         {/if}
       </div>
     {/if}
