@@ -1,0 +1,795 @@
+
+We can now define @fun:alldifferent_checker[l]. Instead of the length of all variables in the fact, we use the length of `materialized_doms` since for some variables in the fact the inferred domain might not be bounded. Furthermore, we use the functions @fund:cardinal and @fund:union_sets.
+
+#funlink(<pseudo:alldifferent_checker>, "alldifferent_checker")
+#pseudocode(title: [Alldifferent inference checker, #alldifflink("alldifferent_checker")])[
+```tiplang2
+Definition alldifferent_checker(fact: ProofFact, constraint: AlldifferentConstraint) -> bool:
+  match infer_domains(fact):
+    case None:
+      return false
+    case Some(domains, _):
+      materialized_doms := materialize_vars_doms(variables(constraint), domains)
+      return cardinal(union_sets(materialized_doms)) <? length(materialized_doms)
+```  
+] <pseudo:alldifferent_checker>
+
+
+Our checker has one significant limitation: to guarantee the fact is verified, the fact may only mention the actual conflicting variables (i.e., the variables in the tight Hall set), since our checker has no way to actually determine which variables are the conflicting ones. This would require a significantly more complex algorithm (see @proc:findhall). However, the additional parts would not have to be verified for soundness, since once we know which variables we must look at we can apply the above checker to those variables and use its correctness to prove soundness. We give an example of a fact our checker cannot verify.
+
+#example(title: [Incorrect rejection of valid fact])[
+  Consider the domains $D(x) = {1, 3}, D(y) = {1, 3}, D(z) = {1, 3}, D(r) = {2, 4}$. The alldifferent constraint with variables ${x, y, z, r}$ would not have a solution, since if we take the conflicting variables ${x, y, z}$, we see there are only two values to choose from. However, if we also include the domain of $r$ into our fact, our checker would count 4 variables and 4 values, which is perfectly fine, and hence the checker would reject the fact.
+]
+
+== Implementation considerations <check:alldiff:impl>
+
+In order to prove soundness using @lem:alldiff_suff (sufficient condition for alldifferent unsatisfiability), we must construct $vars$, $domunion$, and $doms$ s.t. they fulfill the lemma's requirement. As we designed the lemma to be mostly agnostic to the checker's implementation details, we cannot use the result of `infer_domains` for $doms$ (this implementation-agnostic design is discussed in more detail in @sec:rocq:twocat). Furthermore, we also cannot simply use all variables in the domain map, since the fact might include variables that are not in the constraint. While we will not provide the full checker soundness proof here, we do give our choice for these variables, as the rest is mostly straightforward and mechanical. First, let $D$ be the domain map that results from `infer_domains`. 
+- For $vars$ we take all keys of $D$ and filter out those that are not bounded, after which we filter out those that are not contained in the constraint. 
+- For $doms$ we define $doms(x)$ as the materialized version of $D(x)$ if $D(x)$ is finite, and an empty set either if $x$ is not in $D$ or if $D(x)$ is infinite. 
+- For $domunion$ we choose exactly the union that the checker also picks, so `union_set(materialize_vars_doms(variables(constraint), domains))`. 
+Note that you could use the implementation of `materialize_vars_doms` (which uses `flat_map_option`, which in one iteration performs a map but only includes those who are mapped to `Some`; for which we have a lemma that shows it is equivalent to first filtering and then mapping) to choose $vars$. While this makes showing that `length(materialized_doms)` is indeed the length of the variables easier, it must be shown to have no duplicates, which is harder than the double filter approach we take.
+
+
+
+#pagebreak(weak: true)
+
+= Cumulative checker <check:cumul>
+
+For our implementation of an inference checker for a cumulative timetable propagator, we follow our method in @proc:methodinf (methodology for inference checker development), applying it to the timetable propagator we describe in @proc:timetable. This is a more detailed description of @ex:infmethod:cum. We assume in this section that the terminology of @sec:prelim:cumulative is known. However, we do not yet detail the pseudocode or proofs; these are given in @sec:check:cumul:algodesc and @sec:check:cumul:proofs, respectively. We conclude this section with a discussion of some implementation considerations in @check:cumul:impl.
+
+== Applying @proc:methodinf <check:cumul:applymethod>
+
+=== Step 1: Identify propagator conflict checks
+
+*Time conflict.* We begin by examining the main conflict check of the timetable algorithm. This checks whether the resource profile exceeds the capacity. If it is exceeded, the resulting conflict is associated with only a single time $t$: Suppose we have a cumulative constraint $c$ with capacity $capacity(c)$ and activities $x, y, z$ in that constraint that are mandatory at some time $t$. Then, if the usages $usage(x) + usage(y) + usage(z) > capacity(c)$, there is a conflict. Since this conflict is associated with a single time point, we call this a _time conflict_.
+
+=== Step 2: Propagation conflict types
+
+*Activity conflict.* If we study the propagation performed by timetable propagators (which we described in @proc:timetable), we find another conflict type. Consider the same constraint $c$, with the same condition on the usages. Then the three activities cannot be active at the same time. Consider now that $y$ and $z$ are mandatory at all times $lower(x) <= t <= upper(x)$. That means that, no matter where $x$ is scheduled to start between its upper and lower bounds, the capacity would be exceeded. In other words, if we try to place $x$ "on top" of the resource profile with the starting time between its bounds, this will always overflow the capacity somewhere. This implies a conflict. In a more general case with more activities, there could be different activities mandatory at different times. Activity conflicts can also be seen as follows: there is an activity conflict if scheduling $x$ at any time within its bounds would cause a time conflict. 
+
+*Relation between time and activity conflicts.* We note that a time conflict implies an activity conflict for all involved activities at that time. To see why, note that an activity being mandatory at a time $t$ means that no matter at what time it is scheduled exactly, it will be active at $t$. But we know that the other activities are mandatory at $t$ (since we had a time conflict), so no matter where we schedule the activity, there would be a time conflict at $t.$ However, in the case of an activity conflict, it is not necessary for the capacity to be exceeded at any specific time $t$. This can be seen in @ex:cum:conflicts.
+
+*Hints.* A reason for differentiating between activity and time conflicts, despite the fact that a time conflict implies an activity conflict, is that each requires a different type of certificate to check. A time conflict only requires a time $t$, after which it can check which activities are mandatory at that time and determine if the capacity is exceeded. However, an activity conflict, given an activity $x$, must check for all possible starting times of $x$ that it cannot be started there. These certificates, which could be used to serve as hints to the checker, are not used by the checker (except when there is an activity conflict for the variable in the consequent). This is discussed further in @sec:discuss:hints.
+
+*Propagation example.* We have now discussed the two types of conflict. In practice, the type of reasoning done to determine the existence of an activity conflict is actually the reasoning done for propagation. Such propagations, when their right-hand side is negated and added to the left-hand side of the inference, take the form of an activity conflict. 
+
+The following example highlights this fact.
+
+#example(title: "No time conflict")[Consider a constraint $C$ with variables $x$ and $y$, $capacity(C) = 1$ and all usages equal to 1. Let $start(y) in [1, 10]$ and $duration(y) = 2$. Next, let $start(x) in [0, 2]$ and $duration(x) = 4$. Then, $x$ is mandatory at $t = 2$ and $t = 3$. $y$ is nowhere mandatory. $y$ cannot start at $t = 1$, since then it would also be active at $t = 2$, which would conflict with $x$. Similarly, it cannot be active at $t = 2$ or $t = 3$. Therefore, $y >= 4$ would be a valid propagation. If we represent this as a fact, this would be $[x >= 0] and [x <= 2] and [y >= 1] and [y <= 10] -> [y >= 4]$. Then, the logically equivalent conflict form would be: $[x >= 0] and [x <= 2] and [y >= 1] and [y <= 3] -> bot$ (after removing the redundant upper bound for $y$). There is no time conflict, because $y$ is still nowhere mandatory. However, this _is_ an activity conflict, since for all $1 <= t <= 3$, scheduling $y$ at those times would cause a conflict.] <ex:cum:conflicts>
+
+However, there exist (many) propagations that _can_ be verified by finding a time conflict.
+
+#example(title: "Time conflict")[Consider a constraint $c$ with variables $x$ and $y$, $capacity(c) = 1$ and all usages equal to 1. Let $start(y) = 0$ and $duration(y) = 2$. Next, let $start(x) in [0, 10]$ and $duration(x) = 2$. Then, $x$ is nowhere mandatory, while $y$ is clearly mandatory at both $t = 0$ and $t = 1$. The resulting fact is then $[x >= 0] and [y = 0] -> [x >= 2]$. To verify this fact, we check whether the domains $x in [0, 1]$ and $y = 0$ lead to a conflict. We see that $x$ is now mandatory at $t = 1$ since $upper(x) <= 1 < lower(x) + duration(x)$ ($2 <= 1 < 2$). Consequently, there is a time conflict at $t = 1$.]
+
+=== Step 3: Conflict checkers
+
+Now that we know the types of conflicts our checker should find, we design two checkers, one for each conflict. We first present a high-level overview of the two fundamental function definitions. The detailed algorithm (including pseudocode) is then presented in @sec:check:cumul:algodesc. 
+
+*Time conflict checker.* @fun:resource_profile#jmono[(capacity, times, bounded_activities)], computes a resource profile over a given set of times, reporting whether it finds a time conflict at any of the times. For each $t$, the value it reports is the capacity minus the sum of the usages of all activities mandatory at that $t$. This is the difference between the constraint capacity and the standard resource profile as defined in @sec:timetable ($P(t)$ in @proc:timetable, step 2). It works by traversing the given `times` and then computing for each activity in `bounds` whether it is mandatory based on its bounds. The computation exactly follows the definition given in @sec:timetable.
+
+*Activity conflict checker.* #jmono[can_schedule_activity_with_profile(activity, profile)], takes as input a resource profile (as computed by #jmono[resource_profile], so with the remaining capacity instead of the used capacity) on all times from (for an activity $x$) from $lower(x)$ (inclusive) to $upper(x) + duration(x)$ (exclusive) and reports whether it is possible to schedule it at any of those time. Here, it assumes that the particular activity can be scheduled at times when it is mandatory. If it cannot find any such time, it reports an activity conflict. It works by mapping the given profile to a list of booleans, where the boolean represents whether the activity can be active at that time. This is computed (for an activity $x$) by checking as the result of $P(t) >= usage(x)$ (as in @proc:timetable, propagation) for each time, with the value always being #ttrue if $x$ is mandatory (since we assume the case where it cannot be active in that case to be caught by the time conflict checker). This list of booleans is then traversed to find $duration(x)$ number of #ttrue values in a row (so if the duration is 3, the resulting list must be a run of 3 #ttrue\s). If it can find such a run, we know we can at least schedule the activity there, and hence there is no conflict.
+
+=== Step 4: Consequent hint
+
+Since we base the activity conflict check on the propagation performed in the timetable algorithm, we can use the variable present in the consequent to optimize our checker and run #jmono[can_schedule_activity_with_profile] for the variable in the consequent first. In fact, if the consequent contains the variable $x$, we can also perform the time conflict check (and build a resource profile) only for times $t$ s.t. $lower(x) <= t < upper(x) + duration(x)$, falling back to the entire constraint horizon in case we cannot find a conflict.
+
+=== Step 5: Infer domain and combine
+
+Based on the two functions of step 3 and our use of the consequent as a hint, we now have all the ingredients to summarize the main steps of the checker.
++ Given a fact, checker uses @fun:infer_domains[l] to get the domains of the activity's starting times as perforated intervals. From these intervals, the checker extracts the lower and upper bounds and adds their capacity and usage information. See @check:cumul:impl for additional details.
++ From @fun:infer_domains, the checker also gets whether the fact has a consequent and the variable of that consequent. If it does, we will first seek to determine a conflict for the activity present in the consequent. It does this using the @fun:resource_profile function applied to the time range $[lower, upper]$. If there is a time conflict in that range, the inference is also valid. Otherwise, the profile is given to #jmono[can_schedule_activity_with_profile], which returns false in case there is a conflict. If there is no conflict, proceed to the next step.
++ If no conflict could be determined on the consequent's bounds or if there was no consequent, a resource profile will be constructed that ranges from the minimum start time among all variables to the maximum start time among all variables. If no conflict can be determined, it proceeds to the next step.
++ If the previous cases failed, the checker will seek to determine a conflict by checking all activities in the same way as it checked the one associated with the consequent. Once it finds one, it will report it. Otherwise, the checker fails to verify the inference.
+
+In the next section, we give a more complete description of the above algorithm and also include pseudocode.
+
+== Algorithm description <sec:check:cumul:algodesc>
+
+In step 1 we extract the lower and upper bounds of each activity and collect them together with their other parameters (resource usage, activity duration). We call this specific type `BoundedActivity` (@pseudo:boundedact). The procedures in this section all work on this type.
+
+#pseudocode(title: [Type that is used to represent an activity during checking, #cumullink("BoundedActivity")])[```tiplang2
+Record BoundedActivity:
+  lower: Z
+  upper: Z
+  duration: N
+  usage: N
+```] <pseudo:boundedact>
+
+
+The function that performs step 1 is @fun:infer_cumulative_activity_bounds[l]. 
+
+#funlink(<desc:infer_cumulative_activity_bounds>, "infer_cumulative_activity_bounds")
+#fundesc(title: [
+  (#cumullink("inferred_cumulative_activity_bounds")) Uses @fun:infer_domains[l] to infer domains from a fact. It then returns only those activities with bounded start times as `BoundedActivity`, including each activity's parameters from the constraint definition. The option in the return type is the activity associated with the consequent (if it exists). Note that the activity in the consequent also exists in the returned list of activities. If the fact itself is inconsistent, the list will be empty.
+  ])[
+  ```tiplang2
+  Definition infer_cumulative_activity_bounds(
+    constraint: CumulativeConstraint, 
+    fact: ProofFact
+  ) -> List[BoundedActivity]*Option[BoundedActivity]:
+  ```
+] <desc:infer_cumulative_activity_bounds>
+
+
+
+Now, let us define the two functions from the previous section in detail.
+
+@fun:resource_profile works as follows. For each element of the range of times it receives, it simply computes what activities are mandatory and adds up their usages. If this exceeds the capacity, an error is returned. Otherwise it returns the difference between the capacity and the usage. We describe this in pseudocode, noting that some optimizations have been removed for the sake of exposition (see also @check:cumul:impl). The function uses @fund:filter_mandatory[l] and @fund:n_sum[l]. To ensure it can actually catch time conflicts, we use @fund:map_valid[l], which will return `None` if any of the `resource_profile_t` calls returned `None`.
+
+#funlink(<pseudo:resourceprofile>, "resource_profile")
+#funlink(<pseudo:resourceprofile>, "resource_profile_t")
+#pseudocode(title: [Resource profile construction and time conflict checker, #cumullink("resource_profile_t"), #cumullink("resource_profile")])[```tiplang2
+Definition resource_profile_t(
+  capacity: N, 
+  bounded_activities: List[BoundedActivity], 
+  t: Z
+) -> Option[N]:
+  mandatory_at_t := filter_mandatory(t, bounded_activities)
+  mandatory_usages := map(usage, mandatory_at_t)
+  mandatory_usage := n_sum(mandatory_usages)
+  if capacity <? mandatory_usage:
+    return None
+  else:
+    return Some[capacity - mandatory_usage]
+
+Definition resource_profile(
+  capacity: N, 
+  times: list Z,
+  bounded_activities: List[BoundedActivity]
+) -> Option[List[N]]:
+  return map_valid(resource_profile_t(capacity, bounded_activities), times)
+```] <pseudo:resourceprofile>
+
+Next is @fun:can_schedule_activity_with_profile[l]. It works by first converting the profile given to a list of bools that correspond to whether the activity can be active at the associated time. This is done by @fun:profile_to_active_list[l]. This function assumes the first profile entry corresponds to the lower bound of the given activity, with each subsequent entry corresponding to the next timepoint. We show the pseudocode for this function and then illustrate it with an example.
+
+#funlink(<pseudo:profile_to_active_list>, "profile_to_active_list")
+#funlink(<pseudo:profile_to_active_list>, "check_can_be_active")
+#pseudocode(title: [Function that maps profile to list of booleans that represent when activity can be active, #cumullink("check_can_be_active"), #cumullink("profile_to_active_list")])[```tiplang2
+Definition check_can_be_active(bounded_activity: BoundedActivity, usage_time: N*Z) -> bool:
+  t := fst(usage_time)
+  usage_left := snd(usage_time)
+  return is_mandatory(t, bounded_activity) or (usage(bounded_activity) <= usage_left)
+
+Definition profile_to_active_list(
+  bounded_activity: BoundedActivity, 
+  profile: List[N]
+) -> List[bool]:
+  latest_active_time := lower(bounded_activity) + length(profile) - 1
+  profile_range := range(lower(bounded_activity), latest_active_time)
+  profile_with_times := combine(profile, profile_range)
+  return map(check_can_be_active(bounded_activity), profile_with_times)
+```] <pseudo:profile_to_active_list>
+
+#example[
+  Consider the activities from @ex:cum. We seek to verify the fact written in @eq:cum:fact. The checker sees that the consequent mentions $x$. The inferred domain when verifying this fact is $[0, 4]$ for $x$ (since we negate $[x >= 5]$). Then @fun:profile_to_active_list constructs a range (using @fund:range[l]) that represents the full window $x$ could be active, so from $t = 0$ (earliest timepoint it could be active) to $t = 4 + 2 - 1 = 5$ (the latest timepoint it could be active). It assumes it is provided with a profile over the same timepoints. From @ex:cum:sys this profile is [2, 0, 1, 0, 0, 2]. The profile and times are then combined using @fund:combine[l], forming [(0, 2), (1, 0), (2, 1), (3, 0), (4, 0), (5, 2)]. For each of these entries `check_can_be_active` uses @fund:is_mandatory[l] and whether there are enough resources left to determine whether $x$ can be active. This is shown in @table:activelist. Being mandatory is enough, since then $x$ would already be included in the computation of $P(t)$, which is always greater than 0 since otherwise the profile computation would not have succeeded.
+  
+  #figure(
+    table(
+    columns: 4,
+    stroke: (x, y) => (
+      left: if x == 1 { 1pt + black } else { none },
+      top: if y > 0 { 1pt + black },
+      bottom: none,
+      right: none,
+    ),
+    
+    // header
+    [*Time*], [*@fund:is_mandatory*], [*$P(t)$*], [*Can be active?*],
+  
+    // rows
+    [0], [#ffalse], [2], [#ttrue],
+    
+    [1], [#ffalse], [0], [#ffalse],
+    
+    [2], [#ffalse], [1], [#ttrue],
+  
+    [3], [#ffalse], [0], [#ffalse],
+
+    [4], [#ffalse], [0], [#ffalse],
+
+    [5], [#ffalse], [2], [#ttrue],
+    ),
+    caption: [Computation of an active list for activity $x$ from @ex:cum.],
+  ) <table:activelist>
+]
+
+To then determine whether the activity can indeed be scheduled, @fun:can_schedule_activity_with_profile uses @fun:has_n_true[l] to check whether there is a space where the activity can be scheduled. This requires there to be a run of consecutive #ttrue values of length at least equal to the activity's duration. We now show the pseudocode, although we omit it for @fun:has_n_true as this is not central to the cumulative checker. We discuss it in more detail in @subsec:consec in the implementation considerations.
+
+#let runlink(name) = codelink("CumulativeUtil", name, module: "RunOfN")
+
+#funlink(<desc:has_n_true>, "has_n_true")
+#fundesc(title: [
+  (#runlink("has_n_true")) Returns #ttrue if there exist `n` consecutive #ttrue elements in `l`.
+  ])[
+  ```tiplang2
+  Definition has_n_true(n: N, l: List[bool]) -> bool:
+  ```
+] <desc:has_n_true>
+
+#funlink(<pseudo:can_schedule_activity_with_profile>, "can_schedule_activity_with_profile")
+#pseudocode(title: [Function to check if given a profile, an activity can be scheduled, #cumullink("can_schedule_activity_with_profile")])[```tiplang2
+Definition can_schedule_activity_with_profile(bounded_activity: BoundedActivity, profile: List[N]) -> bool:
+  active_list := profile_to_active_list(bounded_activity, profile)
+  return has_n_true(duration(bounded_activity), active_list)
+```] <pseudo:can_schedule_activity_with_profile>
+
+We are now ready for the main checker definition. However, we will not use @fun:can_schedule_activity_with_profile and @fun:resource_profile directly. Instead, we will define a function `check_conflict_for_bound` (@pseudo:cumulative_checker) that constructs a resource profile only for the times between the possible active window of an activity. Furthermore, it uses @fun:check_time_conflict_horizon to check for time conflicts over the constraint's entire horizon in case it cannot find a conflict in the consequent's possible active time window. It also uses @fund:any_true[l] to check for conflicts in all activities as a fallback. This is necessary for facts without a consequent.
+
+#funlink(<desc:check_time_conflict_horizon>, "check_time_conflict_horizon")
+#fundesc(title: [
+  (#cumullink("check_time_conflict_horizon")) Computes the minimum lower bound and maximum upper bound of all activities in `bounded_activities` and then returns `true` if it can find a time conflict using @fun:resource_profile over the interval between that min and max. This means it looks for a time conflict over the entire constraint's horizon.
+  ])[
+  ```tiplang2
+  Definition check_time_conflict_horizon(
+    capacity: N,
+    bounded_activities: List[BoundedActivities]
+  ) -> bool:
+  ```
+] <desc:check_time_conflict_horizon>
+
+#funlink(<pseudo:cumulative_checker>, "cumulative_checker")
+#funlink(<pseudo:cumulative_checker>, "check_conflict_for_bound")
+#pseudocode(title: [#cumullink("check_conflict_for_bound"), #cumullink("cumulative_checker")])[```tiplang2
+Definition check_conflict_for_bound(
+  capacity: N, 
+  bounded_activities: List[BoundedActivity], 
+  activity: BoundedActivity
+) -> bool:
+  latest_active_time := lower(activity) + length(profile) - 1
+  profile_times := range(lower(activity), latest_active_time)
+  match resource_profile(capacity, profile_times, bounded_activities):
+    case None:
+      return true
+    case Some(profile):
+      return negb(can_schedule_activity_with_profile(activity, profile))
+
+Definition cumulative_checker(fact: ProofFact, constraint: CumulativeConstraint) -> bool:
+  (activity_bounds, maybe_rhs_bound) := infer_cumulative_activity_bounds(constraint, fact)
+  match maybe_rhs_bound:
+    case Some(rhs_bound):
+      if check_conflict_for_bound(capacity(constraint), activity_bounds, rhs_bound):
+        return true
+
+  if check_time_conflict_horizon(capacity(constraint), activity_bounds):
+    return true
+  if any_true(check_conflict_for_bound(capacity(constraint), activity_bounds),  
+              activity_bounds):
+    return true
+  else:
+    return false
+```
+] <pseudo:cumulative_checker>
+
+// manual
+\
+
+== Proofs <sec:check:cumul:proofs>
+
+#let inferbounds = jmono[inferred_cumulative_bounds]
+#let inferdoms = jmono[infer_domains]
+#let cannotsched = jmono[cannot_schedule_activity]
+#let resprofile = jmono[resource_profile]
+#let var = jmono[var]
+#let maybebound = spro[maybe_prop]
+#let times = spro[times]
+#let l_mandatory_t = spro[l_mandatory_t]
+#let l_active_t = spro[l_active_t]
+#let xn_of(c) = {
+  jmono[xn_sum] + [(#c)]
+}
+#let cansched = jmono[can_schedule_activity_with_profile]
+#let profile = spro[profile]
+#let activities = jmono("activities")
+
+Our goal is to prove soundness of the cumulative checker. That is, given a fact #fact and a cumulative constraint $c$, if the checker returns true, than any assignment that satisfies $c$ should also satisfy #fact. This is exactly @lem:soundness_generic (soundness for generic constraint inference checker), but then specialized to cumulative. Let us state it formally as a theorem.
+
+#theorem(title: [Soundness for @fun:cumulative_checker, #cumullink("checker_cumulative")])[
+  Let $c$ be a cumulative constraint and let $fact$ be a fact s.t. @fun:cumulative_checker`(fact, c) = true`. Then for all assignments $theta$ that satisfy $c$, we have that they also satisfy $fact$.
+] <thm:checker_cumulative>
+
+In order to prove this, we will need a number of other lemmas. We will use the strategy given in the generic proof of @lem:soundness_generic. This means we must use @lem:infer_domains_correct (@fun:infer_domains specification) to develop a similar specification for @fun:infer_cumulative_activity_bounds. 
+
+=== Using @lem:infer_domains_correct for correctness of @fun:infer_cumulative_activity_bounds
+
+@fun:infer_cumulative_activity_bounds does not produce a domain map we use directly but instead a list of `BoundedActivity` (@pseudo:boundedact). In @lem:infer_domains_correct we were able to relate an assignment with a domain. Here, we instead relate an assignment with a list of `BoundedActivity`. We therefore introduce the notion of a list of `BoundedActivity` to be _valid_ for a particular assignment and cumulative constraint. For this we also also use the following type:
+
+#pseudocode(title: [Activity, #speccdlink("Activity")])[
+  ```tiplang2
+Record Activity:
+  start: Var
+  duration: N
+  usage: N
+```
+]
+
+To grasp why we define the validity as we do below, we must first understand a feature of the CP proof checker. Namely, to make it possible to parse all FlatZinc @nethercote2007minizinc files, which is the format used in practice by the checker to store problem models, it is possible for the above `Var` type to not refer to a named variable. Instead, it can also be just an integer constant. What this means is that it is possible for there to be multiple identical activities, since there is no variable name to distinguish them. Furthermore, given an activity $x$ where `start` is actually a constant and an assignment $theta$, $theta(x)$ will just return the underlying constant. We discuss this in more detail in @subsec:varconst (in the implementation considerations).
+
+We now give the validity definition.
+
+#let lbound = [$l_B$]
+#let lact = [$l_c$]
+
+#definition(title: [Validity of `BoundedActivity` list, #cumullink("valid_bounds")])[
+  Given an assignment $theta$, a list $lbound$ of `BoundedActivity` and a list $lact$ of `Activity` are _valid_ according to the following inductive definition:
+  - They are valid if $lbound$ is empty and $lact$ is empty.
+  - They are valid if there are $lbound', lact'$, $b$ of type `BoundedActivity`, $a$ of type `Activity` s.t. the following holds:
+    - $lbound', lact'$ are valid for $theta$
+    - $lbound = b :: lbound'$
+    - $lact = a :: lact'$
+    - $lower(b) <= theta(start(a)) <= upper(b)$
+    - $duration(b) = duration(a)$
+    - $usage(b) = usage(a)$
+  - They are valid if there are $lact'$, $a$ of type `Activity` s.t. the following holds:
+    - $lbound, lact'$ are valid for $theta$
+    - $lact = a :: lact'$
+] <def:valid_bounds>
+
+From this definition, we see that a valid triple $(theta, lbound, lact)$ can be constructed by taking a constraint and a domain that we now is consistent with $theta$, taking the constraint's list of activities to be $lact$, and then get the lower and upper bounds from the domain for each activity to construct a `BoundedActivity`, and then let $lbound$ be all these `BoundedActivity` (in the same order as $lact$). Note that it is also possible to skip an activity (the third case in the definition), which is useful if we do not have a bounded domain for that activity's starting time.
+
+@fun:infer_cumulative_activity_bounds does exactly this, which gives the following lemma. We write it in the form of @lem:infer_domains_correct (but as we do not need the $2. -> 1.$ direction, we skip that).
+
+#let acts = spro[acts]
+
+#lemma(title: [@fun:infer_cumulative_activity_bounds specification, #cumullink("inferred_cumulative_activity_bounds_spec")])[
+  Let $fact$ be a fact and consider a cumulative constraint $c$. Let $(bounds$, $\_) = $ @fun:infer_cumulative_activity_bounds$(c, fact)$. Then for all assignments $theta$ s.t. $bounds$ and $activities(c)$ are *not* valid for $theta$, we have that $theta$ satisfies #fact.
+] <lem:inferred_cumulative_bounds_spec>
+
+#sketch[
+  We only sketch the proof, as it relies heavily on the exact implementation (see @check:cumul:impl). 
+  
+  Let $theta$ be an assignment as required. @fun:infer_cumulative_activity_bounds first calls @fun:infer_domains on the fact. If it returns `None`, then #bounds is empty. Then, by @def:valid_bounds we should have that #bounds and $activities(c)$ are trivially valid for $theta$. But since one of our assumptions is that this is not not the case, we have a contradiction and are done in this case.
+
+  Otherwise, we have that @fun:infer_domains returns a domain $D$. We can then use @lem:infer_domains_correct to rewrite our goal to showing that $theta$ is not consistent with respect to $D$.
+
+  We show this by assuming $theta$ is consistent with $D$ and deriving a contradiction. Note that if $theta$ is consistent with $D$ and #bounds is constructed as we described above (by processing $activities(c)$ and determining the bounds from $D$), then #bounds and $activities(c)$ are valid for $theta$. But this contradicts our assumption that they are not valid.
+]
+
+Using @lem:inferred_cumulative_bounds_spec while trying to prove @thm:checker_cumulative, it is possible to reduce the goal to showing that #bounds and $activities(c)$ are not valid for an assignment $theta$ that satisfies the cumulative constraint $c$. This is equivalent to showing that assuming they _are_ valid will lead to a contradiction. Since our checker only returns `true` when either @fun:check_conflict_for_bound or @fun:check_time_conflict_horizon return `true`, our next goal will be to show that if they return true, then we will be able to derive a contradiction using our assumptions. We study each case separately.
+
+=== Contradiction when @fun:check_conflict_for_bound = `true`
+
+We will be able to find a contradiction by proving the following lemma.
+
+#lemma(title: [No activity conflict for solution, #cumullink("no_bound_conflict_for_solution")])[
+  Let $theta$ be an assignment satisfying the cumulative constraint $c$, let #bounds be s.t. it is valid for $activities(c)$ and $theta$. Then, for any $b in bounds$, we have that @fun:check_conflict_for_bound`(capacity(c), bounded_acts, b) = false`.
+] <lem:no_bound_conflict_for_solution>
+
+From @pseudo:cumulative_checker we see that @fun:check_conflict_for_bound relies on @fun:resource_profile and @fun:can_schedule_activity_with_profile. We will have to prove that there are no overflows in an assignment that satisfies a cumulative constraint and that any activity in the constraint can be scheduled. For this first fact we will need one additional intermediate lemma.
+
+#lemma(title: [Mandatory usage less than or equal to true usage, #cumullink("bounds_mandatory_t_le_usage")])[
+  Let $theta$, $acts$ and #bounds be s.t. #bounds and #acts are valid for $theta$ and let $t$ be an arbitrary timepoint. Then, let `mandatory_usage` be exactly as defined in @fun:resource_profile_t for inputs #bounds and $t$ (capacity is not needed to compute `mandatory_usage`). Then, we have that: 
+  $ #raw("mandatory_usage") <= sum_(x in M_theta (t)) usage(x), $
+  where $M_theta (t)$ is a subset of #acts s.t. each activity in $M_theta (t)$ is active at $t$ according to $theta$.
+] <lem:bounds_mandatory_t_le_usage>
+#proof[
+  Since #acts and #bounds are valid for $theta$, we have for each $b in bounds$ that there is precisely one matching activity $a in acts$ s.t. $theta(x)$ falls within the bounds of $b$ and has the same usage. Next, `mandatory_usage` is the sum only over each mandatory activity. But for each mandatory activity $b$, its matching activity will certainly be active. Hence, its matching activity will be in $M(t)$ and therefore each element of the sum on the left-hand side also exists on the right-hand side.
+]
+
+We can now prove that a solution to cumulative will have no overflows.
+
+#lemma(title: [No overflow for solution, #cumullink("no_profile_overflow_for_solution")])[
+  Let $theta$ be an assignment that satisfies a cumulative constraint $c$ and let #bounds be a list of `BoundedActivity`. Furthermore, assume #bounds and $activities(c)$ are valid for $theta$. Then for any list of timepoints #times, we have that @fun:resource_profile`(capacity(c)), times, bounded_acts)` does not return `None`.
+] <lem:no_profile_overflow_for_solution>
+#proof[
+  We assume it returns `None` and derive a contradiction. If it returns `None`, then according to how @fund:map_valid works there must exist some $t in times$ such that @fun:resource_profile_t`(capacity(c), bounded_acts, t)` returns `None`. Let `mandatory_usage` be as defined in @fun:resource_profile_t for the inputs `capacity(c), bounded_acts, t`. Then we must have that $capacity(c)$ $<$ `mandatory_usage`. Now, since $theta$ satisfies $c$, we must have that $sum_(x in M_theta (t)) usage(x) <= capacity(c)$, where $M_theta (t)$ is the set of activities in $c$ active at $t$ according to $theta$. If we now apply @lem:bounds_mandatory_t_le_usage we see that `mandatory_usage` $<= sum_(x in M_theta (t)) usage(x)$. From this we can then derive $capacity(c) < capacity(c)$, which is a contradiction.
+]
+
+Before we state the precise lemma for @fun:can_schedule_activity_with_profile needed to prove @lem:no_bound_conflict_for_solution (the main goal of this subsection), we will need to define what a _valid_ profile is.
+
+#definition(title: [Profile validity, #cumullink("valid_profile")])[
+  Let $C$ be some capacity and #bounds be a list of `BoundedActivity`. We call the profile (which is a list of $N$) #profile _valid_ on $t_min$ to $t_max$, if the following holds:
+  - Its length is equal to $t_max - t_min + 1$ (or it is empty if $t_min > t_max$)
+  - For every $t$ s.t. $t_min <= t <= t_max$, the $n$th element (such that $n = t - t_min$) of the list should equal the result of @fun:resource_profile_t$(C, bounds, t)$ and this should not be a conflict.
+]
+
+We now state the lemma.
+
+#lemma(title: [Can schedule for solution, #cumullink("can_schedule_activity_with_profile_valid")])[
+  Let $theta$ be an assignment that satisfies a cumulative constraint $c$ and let #bounds be a list of `BoundedActivity`. Furthermore, assume #bounds and $activities(c)$ are valid for $theta$. Then, for any bound $b in bounds$ and #profile that is valid on $[lower(b), upper(b) + duration(b) - 1]$ for $capacity(c)$ and #bounds, we must have that @fun:can_schedule_activity_with_profile`(b, profile) = true`.
+] <lem:can_schedule_activity_with_profile_valid>
+
+We cannot prove this before some additional theory, which we will discuss in the next subsection (@subsec:canschedproof). However, we are now ready to present the proof of @lem:no_bound_conflict_for_solution. We do note we skip some details related in particular to how @fund:range is implemented and how we define the proofs for it, but we believe this is unimportant for this presentation.
+
+#proof(of: <lem:no_bound_conflict_for_solution>)[
+  Let $b$ be as in the statement. Let `latest_active_time` and `profile_times` be as defined in @pseudo:cumulative_checker for inputs `capacity(c), bounded_acts, b`. 
+
+  Since the conditions of @lem:no_profile_overflow_for_solution are satisfied, we have that @fun:resource_profile`(capacity(c), profile_times, bounded_acts)` cannot return `None`. 
+
+  Instead, let #profile be the profile it returns. All we need to do is show that #profile is a valid profile to apply @lem:can_schedule_activity_with_profile_valid, which since we negate the result of @fun:can_schedule_activity_with_profile gives us what we need.
+
+  From how `profile_times` is defined using @fund:range, we see immediately that #profile indeed has the correct length. Furthermore, the second property is also satisfied since @fun:resource_profile simply maps `profile_times` (which has as its $n$th element the value exactly what is required) using @fun:resource_profile_t. We also know that none of them are a conflict because of how @fund:map_valid works, as @fun:resource_profile did not return `None`.
+]
+
+We will now develop what is necessary to prove @lem:can_schedule_activity_with_profile_valid. After that, only a lemma about @fun:check_time_conflict_horizon remains before we can prove the main soundness theorem.
+
+=== Proof of @lem:can_schedule_activity_with_profile_valid <subsec:canschedproof>
+
+@fun:can_schedule_activity_with_profile[l] first constructs an `active_list` using @fun:profile_to_active_list and then calls @fun:has_n_true. We will not discuss in detail how the latter works (and how we prove its correctness) as it is not essential for understanding cumulative. We mention some more details in @subsec:consec. 
+
+#proof(of: <lem:can_schedule_activity_with_profile_valid>)[
+  Let $b$ and #profile be as required. We must show that @fun:has_n_true`(duration(b), active_list)` returns `true`, where `active_list` equals @fun:profile_to_active_list`(b, profile)`.
+
+  This is the case when there exists some (zero-indexed) index $k$ in `active_list` s.t. the "run" starting at the $k$th element of `active_list` at least has length $duration(b)$. A run is a series of consecutive `true` values starting at some index. Furthermore, since #bounds and $activities(c)$ are valid for $theta$, there exists an $a in activities(c)$ that matches $b$.
+
+  Now let $k$ be $theta(start(a)) - lower(b)$. Remember, since $a$ matches $b$, we have that $lower(b) <= theta(start(a)) <= upper(b)$. Now, the run starting at $k$ will be of length $duration(b)$ if we have that for all $i$ s.t. $k <= i < duration(b)$, the $i$th element of `active_list` is `true`.
+
+  Consider that #profile is a valid profile starting at $lower(b)$. Then the $n$th element of #profile corresponds to @fun:resource_profile_t`(capacity(c), bounded_acts, n+lower(b))`. Let us write this as  $P_bounds (n+lower(b))$ If we look at the elements of `active_list`, by the properties of @fund:range and @fund:combine we see that its $n$th element is @fun:check_can_be_active$(b, (P_bounds (n+lower(b)), n+lower(b)))$. We see that $n$th element is then `true` if either $b$ is mandatory at $n+lower(b)$ or if $usage(b) <= P_bounds (n+lower(b))$.
+
+  If we now consider $n$ s.t. $k <= n < duration(b)$, then $start(a) <= n+lower(b) < start(a) + duration(b)$. Therefore, we are done if for all $t$ s.t. $start(a) <= t < start(a) + duration(b)$, we have that $b$ is mandatory at $t$ or if $usage(b) <= P_bounds (t))$.
+
+  Consider an arbitrary such $t$. If $b$ is mandatory at $t$, we are done. Otherwise, we know that $b$ is not mandatory at $t$ and hence the usage of $a$ is not included in the `mandatory_usage` used to calculate $P_bounds (t)$ (see @pseudo:resourceprofile). However, $a$ is active at $t$ according to $theta$, since it falls within its active period. Since, $theta$ satisfies $c$, the total usage at $t$ cannot exceed the capacity of $c$. Hence $P_bounds (t)$ must be at least $usage(b)$, since otherwise the capacity would be exceeded.
+]
+
+=== Contradiction when @fun:check_time_conflict_horizon = `true` <subsec:checkhorizon>
+
+We will not precisely state or prove the lemma that a contradiction occurs in this case. However, this is quite clear, since it returns `true` if it finds a time where @fun:resource_profile_t returns `None`. However, the list of timepoints that includes all timepoints in the constraint's horizon satisfies the assumptions of @lem:no_profile_overflow_for_solution. But according to that lemma, it cannot return `None`. Therefore, there is a contradiction. 
+
+=== Proof of @thm:checker_cumulative.
+
+We can now prove the soundness theorem.
+
+#proof(of: <thm:checker_cumulative>)[
+  Let $c$ be a cumulative constraint and $fact$ a fact. Furthermore, let @fun:cumulative_checker`(fact, c) = true` and let $theta$ be an assignment that satisfies $c$. We must show that $theta$ satisfies #fact.
+
+  Let #bounds, #maybebound be the result of @fun:infer_cumulative_activity_bounds`(c, fact)`.
+
+  We apply @lem:inferred_cumulative_bounds_spec to reduce our goal to showing that #bounds and $activities(c)$ are not valid for $theta$. To do that, we assume they are valid and derive a contradiction.
+
+  First, we show that the checker only returns `true` in two cases:
+  #[
+    #set enum(numbering: "a)")
+    1. There exists a bound $b in bounds$ s.t. @fun:check_conflict_for_bound`(capacity(c), bounded_acts, b) = true`
+    2. @fun:check_time_conflict_horizon`(capacity(c), bounded_acts) = true`
+  ]
+  
+  If we look at every place the checker returns `true`, in the first case #maybebound is `Some`. Then clearly case a) applies. We omit the proof that $maybebound in bounds$, as it is not interesting and relies only on a number of data structure operations. In the second case, clearly case b) applies. In the final case, by the definition of @fund:any_true case a) clearly applies.
+
+  All that remains to be done is to derive a contradiction in case a) and case b).
+
+  In case a) we apply @lem:no_bound_conflict_for_solution and see that @fun:check_conflict_for_bound`(capacity(c), bounded_acts, b) = false`, which contradicts our assumption.
+
+  In case b) we follow the argument in @subsec:checkhorizon to derive a contradiction.
+]
+
+== Implementation considerations <check:cumul:impl>
+
+=== Control flow and errors
+
+The pseudocode in the previous sections is written in a style that assumes the existence of more explicit control flow than exists in the language that the checker is implemented in (Rocq). This is done to aid readability. In truth, Rocq is a purely functional language and does not have the concept of an early return or the concept of an error. Instead, the fact that a function returned an error is inferred through different means. We highlight two examples.
+
+1. The type signature of #resprofile in reality is simply `list N`. Instead, an error case is distinguished from a non-error case by setting the list to `nil`. This is primarily to allow the use of @fund:map_valid. 
+2. #jmono[resource_profile_t] actual return type is `option N`, where the `None` case is the error. 
+
+=== Reversed range input
+
+We explicitly did not write an actual invocation of #resprofile in the pseudocode, as the actual implementation expects a range of times that is in _decreasing_ order, as opposed to the final profile, which is in increasing order. This is because @fund:map_valid reverses its input for performance reasons (as this allows writing it as a tail-recursive function).
+
+=== Combined steps
+
+A number of values are computed in a single iteration, as opposed to multiple ones, again for performance reasons. An example that actually has implications for the proof is the computation of the active list in @fun:profile_to_active_list. Instead of building another range, then combining, and then mapping, a function called `z_map` is used that computes the time inputs as it recurses. 
+
+=== Run of consecutive values <subsec:consec>
+
+For the proof of @lem:no_bound_conflict_for_solution we simplified many details. In fact, the entire theory that leads to the fact that a run of a certain length $n$ is implied by the existence of an index $k$ s.t. for all $i$ s.t. $k <= i < k + n$ is nearly 350 lines of Rocq. We list a number of interesting implementation details.
+
+The recursive structure of `has_n_true` makes proofs hard as it works with a current run length that resets whenever it hits zero. In a way, this non-monotonicity makes a standard inductive proof for its properties difficult. Instead we define a much more inefficient function `max_runs` that simply works by computing the maximum of the runs starting at every index and relate it to `has_n_true`. The maximum never resets as it recurses, making proofs easier.
+
+In the previous subsection we mention the function `z_map` that computes the time inputs as it recurses on some list. This makes determining what the $n$th value of its output is easier, which helps reducing the problem of showing that the run of consecutive values is a particular length to the statement that every timepoint between some bounds obeys the required condition.
+
+=== Variables and constants <subsec:varconst>
+
+As discussed, the variable type used in the CP proof checker is either an identifier, or a constant integer value. The reason for this mostly comes from practical concerns, as the CP proof checker must support reading FlatZinc files @nethercote2007minizinc.
+
+This allows two different activities to actually look identical, since identical parameters and starting time are very possible. This means that after processing activities into a list of `BoundedActivity`, we cannot "go back" to the list of activities in the constraint and find which activity gave rise to the `BoundedActivity`, since more than one might be valid. Furthermore, we cannot easily use a map data structure as we have no natural key we can choose.
+
+There are ways around this, by generating unique names also for the constant activities. However, this would necessarily incur some runtime cost. Instead, by defining validity (@def:valid_bounds) in a way that strongly follows exactly how activities are processed, we can find the matching activity when we need it in _proofs_. 
+
+We have mostly omitted the details of finding this matching activity, but it works roughly as follows:
+
+1. The goal is given a `BoundedActivity` $b in bounds$, s.t. $bounds$ is valid with respect to a list of activities $acts$, to find the $a in acts$ that matches $b$.
+2. First, since $b in bounds$, we can split $bounds$ into two lists, with $b$ somewhere in the middle. We can then prove that we can similarly split $acts$ into two lists, with the matching $a$ in the middle as well.
+3. To show this, use induction over #acts and look at the possible cases how #bounds could have been constructed. In the end this will require there to be some matching $a$.
+
+#pagebreak(weak: true)
+
+= Rocq findings <sec:rocq>
+
+
+During the implementation and formal verification of a constraint programming unsatisfiability proof checker in Rocq, we noticed a number of things that we believe are useful to discuss and that we have not seen discussed elsewhere. While our discussion is specific to Rocq, we believe these findings also apply to formal verification in general, although some proof assistants/interactive theorem provers handle some things better than others (although we have not investigated this in detail). First of all, we found that there are two main categories of proof segment (where a proof segment is defined as some operation consisting of one or more proof lines): data structure manipulation and conceptual. Full proofs often interleave these two categories. The next section goes into detail on this. Closely related is the fact that developing the right specification, so the right definitions of the intended behavior of implementations, is much harder than actually proving them. We also discuss this in a separate section below. We also discuss some more details related to Rocq and proof assistants in @sec:discuss:itp as part of the Discussion.
+
+Note: We use snippets of Rocq code more liberally in this section than in others and therefore assume some familiarity with Rocq.
+
+== Two categories of proof <sec:rocq:twocat>
+
+The first type of segment is what we describe as a _data structure manipulation_ segment, or _implementation-coupled manipulation_ segment. Proof segments of this type are very tightly coupled to the implementation and less so to the underlying concepts. The work is often tedious, but at the same time mechanical. Furthermore, it is very hard to read proof segments of this category. In fact, we found it nearly always takes _less_ time to simply redo the proof than to adapt it to a small change in the implementation. This category also makes up the vast majority of most proofs, when looking at the number of lines. 
+
+The second type of segment is what we describe as a _conceptual_ segment. These proofs are often shorter, but (usually) much less obvious. They take more time to develop, but are less sensitive to changing small details. Therefore, these proofs are more valuable to preserve when refactoring. Often, they are also more readable than the other type of segment.
+
+=== Example: alldifferent checker
+
+To test this hypothesis, we developed our alldifferent checker in such a way that each individual lemma consists mostly of one type of proof segment. This makes the core, conceptual proofs more implementation-agnostic, as was briefly mentioned in @check:alldiff:impl. 
+
+The main conceptual proof, which is @lem:alldiff_suff, makes no mention of our implementation. First, we state the important definitions in Rocq. First, some shorthand definitions, where `sint.t` is an `MSet` with elements of type `Z`, using the `MSetRBT` set implementation (both from the standard library).
+
+#snippet[Shorthand definitions of general concepts][
+  ```
+  Definition domains := string -> sint.t.
+  
+  Definition assignment_consistent_with_domains (doms : domains) (variables : list string) (assignment : string -> Z) : Prop :=
+    forall x, In x variables -> sint.In (assignment x) (doms x).
+  ```
+] <snip:alldiffshorthands>
+
+Then, the formal statements of an alldifferent constraint and when we consider an alldifferent constraint to be satisfiable given some variable domains.
+
+#snippet[Alldifferent formal definition][
+  ```
+  Definition Alldifferent_l (variables : list string) (assignment : string -> Z) : Prop :=
+    forall x y, 
+      In x variables -> 
+      In y variables -> 
+        assignment x <> assignment y.
+  ```
+] <snip:alldiffformal>
+
+#snippet[Formal definition of an alldifferent constraint being satisfiable][
+  ```
+  Definition AllDifferent_satisfiable (doms : domains) (variables : list string) :=
+    exists assignment, assignment_consistent_with_domains doms variables assignment 
+      /\ 
+    Alldifferent_l variables assignment.
+  ```
+] <snip:alldiffformalsat>
+
+Finally, the statement of @lem:alldiff_suff  in Rocq.
+
+#snippet[Formalized statement of @lem:alldiff_suff][
+  ```
+  Lemma alldiff_unsatisfiable_condition (doms : domains) (variables : list string) (domain_union : list Z) :
+    NoDup domain_union
+      ->
+    NoDup variables
+      ->
+    (forall n, In n domain_union <-> (exists x, In x variables /\ sint.In n (doms x)))
+      ->
+    List.length domain_union < List.length variables
+      -> 
+    ~ AllDifferent_satisfiable doms variables.
+  ``` 
+] <snip:alldiff_suff>
+
+The proof of @snip:alldiff_suff is 21 lines and follows the proof as we described it in @lem:alldiff_suff almost exactly. We use only a few lemmas, all from the Rocq standard library. Although some details are specific to the fact we use lists without duplicates to model sets, we do not need to actually use the definition of a list, only some high-level facts. We claim that the proof therefore consists mostly of conceptual segments.
+
+Then, the implementation of our checker then takes 35 lines (7 lines if we exclude the implementation of materializing perforated intervals as lists of elements). The soundness proof is then a staggering 104 lines (including 7 lines of comments), even though it mentions nothing new conceptually. This is nearly 5 times the number of lines in the conceptual proof. We will not repeat the proof here, but detail the different segments. For more information on how we actually instantiated @lem:alldiff_suff, see @check:alldiff:impl.
+
+1. We introduce variables and rewrite the proof so we have the validity of the domain map in our hypothesis (using the correctness lemma of `infer_domains`, see @sec:res:infcheck). (304-310; 6 lines)
+2. We define our choices of `doms` and `variables` so that we can later apply the lemma in @snip:alldiff_suff. (311-315)
+3. We show that our choice of `doms` and `variables` satisfies `assignment_consistent_with_domains` (@snip:alldiffshorthands) (316-327)
+4. The definition of alldifferent from @snip:alldiffformal does not match the specification of alldifferent in our checker, because for performance reasons we do not store variables in a list, and another implementation detail we do not mention here. Therefore, we must show that it is enough to show that the definition of not being satisfied (`~ AllDifferent_satisfiable`, @snip:alldiffformalsat) by our chosen variables is enough to show that the checker's conception of alldifferent is not satisfied. This also does the job of relating it to our hypothesis, stating the validity of our domain map from the first step in the proof. (328-357)
+5.  We then introduce our instantation of `domain_union`, finally allowing us to apply `alldiff_unsatisfiable_condition` (@snip:alldiff_suff) (358-360). 
+6. We dispatch the conditions that our instantiations of `domain_union` and `variables` contain no duplicates. This is easy as they are either the elements of an `MSet` or the filtered keys of an `MMap` (see @sec:domainmap:impl for what `MMap` is and how we use it). (361-362)
+7. The most tedious part now follows: showing that the condition `forall n, In n domain_union <-> (exists x, In x variables /\ sint.In n (doms x))` from @snip:alldiff_suff holds for our instantiations of `variables`, `doms`, and `domain_union`. This relies heavily on a few other facts (also consisting of dozens of lines of proof) of how we materialized perforated intervals in a (relatively) efficient way as lists of elements, while remembering that we only materialized them for the variables we chose. (363-396)
+8. Finally, we reason over the fact that our checker returning #ttrue indicates that indeed the length of our chosen `domain_union` is strictly less than the length of our chosen `variables`. This requires yet again going into the implementation of how we materialized domains. (397-417)
+
+We claim that all the listed proof segments save the actual application of `alldiff_`#sym.zws`unsatisfiable_`#sym.zws`condition` in step 5 are data structure manipulation segments.
+
+We do not have a solution for this situation (we are unsure if we can even justify calling it a "problem") as we are not experts in Rocq. See @sec:discuss:automation for a discussion of proof automation, which we had initially hoped would be able to prevent the dominance of implementation-specific lines vs conceptual lines. Also see the next section.
+
+// manual
+\
+\
+
+== Choosing the right specification
+
+We find that choosing how to describe the behavior of a particular function, or what parts to describe and which parts to ignore, is very important to achieving strong productivity in a proof assistant such as Rocq. Sometimes, the right choice is to actually not write a specification at all, but to simply take the actual function definition as the canonical specification and prove that other functions are equivalent to it.
+
+An example of the latter case is our implementation of the @fund:range function. Since for a given lower and upper bound, there is only one possible range, we can declare any definition that is easy to work with in proofs as the canonical implementation. Since it is an actual definition, many properties can easily be proven when needed and do not always require additional lemma's. 
+
+As we iterated on the proofs of the cumulative checker to improve their structure and readability and bring them closer to pen-and-paper proofs, we saw that there is great freedom in choosing the right specification and this significantly impacted the size of the proofs, in one instance going from 1200 to 900 lines of Rocq for the main cumulative checker.
+
+Even though the findings in this subsection are mostly anecdotal, we report them as they serve as the starting point of a more systematic investigation.
+
+
+#pagebreak(weak: true)
+
+= Discussion <sec:discussion>
+
+We first summarize and interpret each of our contributions separately. For each contribution, we also discuss the implications and their specific limitations. We organize them as follows:
+- In @sec:discuss:prop we discuss our contributions related to propagator inferences, namely our inference checker methodology and our development of inference checkers for timetable cumulative and alldifferent.
+- In @sec:discuss:perfint we discuss our contributions related to perforated intervals. We also discuss our contributions related to the deduction step.
+- In @sec:discuss:itp we discuss our findings related to using Rocq, which we expect to also generalize to other interactive theorem provers.
+
+Next, we collect and briefly discuss various minor contributions to the CP proof checker in @sec:discussion:lego, mostly in the form of building blocks and utilities that can be reused for future extensions of the checker. We discuss general limitations that apply to our results more broadly in @sec:discussion:limits, followed by a discussion on future work in @sec:discussion:future.
+
+== Propagator inference methodology and propagator inference checkers <sec:discuss:prop>
+
+*We have demonstrated the feasibility of formally verified propagator inference checkers* through the successful development of an alldifferent checker (for minimal inferences; @check:alldiff) and a cumulative checker (for timetable reasoning; @check:cumul).
+
+The formally verified alldifferent checker is the first of its kind, while a cumulative checker has previously been demonstrated @gange1certifying. However, our cumulative checker is designed for a fully formalized proof system, and we believe that it describes more precisely the class of inferences it expects to check. We could not verify whether the checker by Gange et al. @gange1certifying also verifies every timetable inference that we are able to verify (we believe our checker can verify all of them).
+
+If we compare our work to other approaches for formally verified CP, we see they either use a generic algorithm that is not constraint specific @carlier2012certified, or encode models and reasoning in another, simpler language (SAT or PB) @gocht2022auditable @veksler2010CSPprof. 
+
+However, our goal was not only to demonstrate the feasibility of this novel approach but to determine how we can develop propagator inference checkers. Our ambition was to make it possible for future work to develop new checkers in a mostly mechanical way. It should be possible to derive them from the propagation algorithm with formal correctness proofs that are no more difficult than their corresponding pen-and-paper proofs.
+
+We believe our *propagator inference methodology* (@sec:methodology) does not fully achieve this goal, but *does provide an important first step that increases the understanding of these checkers*. This is mainly because of the introduction of conflict types (@sec:infmethod:conflicttypes), with two clear examples in the cumulative checker: time conflicts and activity conflicts (@check:cumul:applymethod).
+
+Furthermore, we see that there exists a class of constraints and propagators that are simple enough that they do not even need this methodology. In the case of alldifferent, we see that Hall's theorem (@thm:hall) provides all we need. This implies that developing checkers for other constraints that are similarly deeply understood should be straightforward. It also provides a clear motivation to study the literature and find analogs of Hall's theorem.
+
+=== Limitations
+
+We now discuss some limitations. First of all, we have only tested and developed the methodology based on a single constraint (cumulative) and propagator (timetable). The linear inequality checker and alldifferent checker are too simple for the methodology to apply. 
+
+Another major limitation of our methodology is that it provides no guidance on the _formal verification_ part of implementing a propagator inference checker. While this was an explicit goal, we have not found any generally applicable concepts that can make formally verifying the conflict checkers any easier. Our overall results do contribute to this (through perforated intervals and potentially re-using code from the cumulative checker for other constraints related to activities). One thing we observe is that the major difficulty comes from implementation-coupled proof segments (see @sec:rocq:twocat), which we believe is hard to generalize (as by definition it relies heavily on the specific implementation, which will always differ between constraints). 
+
+== Perforated intervals <sec:discuss:perfint>
+
+One of our most important and most practical contributions is the development of perforated intervals (@sec:perfint): their formalized theory and their formally verified implementation, including check and update operations. To our knowledge, a holes+interval-based domain representation, while not new, has not been thoroughly studied on its own merits before, nor do we know of any study about the concept of _tightness_. Furthermore, while the theory of perforated intervals is simple, this is actually a large benefit when it comes to formal verification, as simple concepts are often more easily formally verified. 
+
+The success and generalizability of perforated intervals were unexpected, as we had no explicit goal related to it: only an idea that we wished to develop building blocks that could be reused by multiple inference checkers. All of our checkers rely on perforated intervals, and due to their use at the heart of the checker (through the deduction step), they are an integral part of the proof checker implementation and its performance characteristics. 
+
+Preliminary experimental results from Sidorov et al. @sidorov2025checker indicate they are performant enough in practice, although this requires further study. If this is confirmed, we hypothesize this can be primarily attributed to the efficient implementation of red-black trees in Rocq for our sets and maps by Appel et al. @appel2011rbt. 
+
+In the next section, we highlight the usages of perforated intervals in our work and the overall checker. After that, we discuss the relevance of additional results not strictly necessary for the checker's soundness proof. We follow that by discussing alternatives to perforated intervals. Finally, we discuss the deduction step, as its implementation relies primarily on perforated intervals.
+
+=== Usages
+
+Perforated intervals are used throughout the checker, primarily at points where integer domain reasoning, bounds reasoning, and atomic constraints intersect. We list the following:
+
+1. In the cumulative checker (@check:cumul), they are used to extract the lower and upper bounds for each activity from a fact (see also @sec:res:infcheck).
+2. (Not our contribution) In the nogood equivalency checker, the two nogoods that are to be checked are converted into domains, after which each domain is checked for equivalence (currently they are required to have exactly the same holes, but this requirement could be relaxed as holes outside the bounds do not have to be considered).
+3. In the alldifferent checker (@check:alldiff), they are used to first aggregate the domains of all variables in the fact. After this, the perforated intervals that are bounded on both sides are _materialized_: they are converted into element lists. This eases the computation (and subsequent formal verification) of the union of domains. In the future, materialization could be avoided by implementing a union operation over perforated intervals.
+4. Critically, in the deduction checker (@sec:deduct), they are used to track the domains of each variable as inferences are checked and applied in order. As perforated intervals support efficient check functions (@sec:perfint:checks) and update functions (@sec:perfint:updates), all operations are logarithmic. If any variable has an empty domain at the end of the deduction step, we know the deduction is valid.
+
+We expect all future propagator inference checkers to also use perforated intervals, as they allow the inference of rich domain information from facts, which are represented as lists of atomic constraints. We spent much of our time on exactly this problem, which means that future checkers can simply reuse this infrastructure. 
+
+The correctness specification (see @sec:res:infcheck) of this procedure is also phrased in such a way and comes with a number of additional lemmas that simplify the proof of inference checkers. They work by transforming the soundness proof from a proof about fact validity into a proof about unsatisfiability under a domain. It thereby also performs the right-hand side negation we saw was useful already in @proc:verifystrat (propagator verification strategy).
+
+=== Completeness
+
+We provide additional proofs that are not necessary for proving the soundness of the proof checker: namely, the fact that the checker functions (@sec:perfint:checks) _decide_ their respective properties when the domain is tight is not necessary for this. We only need the backwards direction of @lem:check_holds_decides (check decides atomic holds) and @lem:check_consistenty_decides (check decides consistency). However, the forward direction provides strong guarantees that our implementation will not mistakenly reject valid deductions or fail to notice that the premises of an inference are already contradictory. We fully prove the second lemma, but we have two unresolved cases for @lem:check_holds_decides. The difficult case has been proven, and the other case is symmetric, but was not proven due to time constraints. 
+
+Furthermore, while we do use the tightening function to ensure that we do not reject valid deductions, for soundness, we only need that tightening does not change the logical domain (@lem:tighten_with_holes_sound). However, we actually prove that the tightening procedure causes the domain to become tight. This is actually rather involved, but critical if we want to indeed ensure we do not unnecessarily reject deductions or inferences.
+
+Other than mistaken rejections, these proofs are also important theoretical contributions, as they are they show the power of perforated intervals by proving that the simple check functions really are enough to determine the properties we care about.
+
+=== Alternatives <sec:discuss:perfint:alts>
+
+Our domain representation based on perforated intervals is rather non-standard. Indeed, we know of no special term to refer to this representation (perhaps due to its simplicity) and have used the term perforated interval in this work. Instead, in CP applications, common domain representations include range sequences, just an interval, or fully enumerated domains (the latter can be implemented in numerous ways, such as with a bitvector). For example, in the Chuffed @chuffed2025 constraint solver, integers are either fully enumerated or represented as a single interval. The Gecode @gecode2025 constraint solver uses range sequences. A newer representation is that of sparse sets @leclement2013sparseset, used e.g. in MiniCP @michel2021minicp. Gap interval trees @pohitos2010gaptrees also exist. Furthermore, there has been formalization work of other representations, see @ledein2020intervallist for lists of intervals and @dubois2025sparsesetverif for sparse sets. 
+
+Some of these are clearly not feasible to fully replace the perforated interval, because they do not support infinite domains (e.g., enumerated domains). However, they _could_ be used without issue to replace the way we implement the set of holes, which relies only on the features of the `MSet`-interface in Rocq. Therefore, any implementation that satisfies this interface could serve as a drop-in replacement for our choice of an implementation based on red-black trees in the standard library.
+
+Furthermore, we would not need perforated intervals (or at least we would not need the majority of the theory, check, and update operations) if the proof system had a richer view of domains embedded in the format instead of a list of atomic constraints. Furthermore, additional requirements such as sorting the facts by variable or in other ways could also allow replacing (at least part of) the perforated interval implementation. However, this has other drawbacks as it increases the complexity for solvers. This could be solved by moving much of the work being done by perforated intervals into the parsing stage. 
+
+=== Deduction step
+
+We believe the novelty of our contribution to developing a formally verified implementation of the deduction step is primarily contained in the contribution of perforated intervals and the (more straightforward) development of domain maps on top of them. If we exclude those two contributions, the soundness proof of the deduction step follows mostly from the design of the proof system. We think this is a testament to the proof system. We wish to highlight the fact that the use of domain maps in the implementation can be fully factored out from the soundness proof, compare @lem:deduct_check_inferences to @lem:deduct_check. This means that the main loop of the checker that combines all the individual proof step checkers does not need to concern itself with domain maps or perforated intervals.
+
+When it comes to performance, the deduction step, as implemented, does not make any unnecessary traversals or any unnecessary accesses. We expect potential improvements to be found only in the use of the domain map and domain implementation.
+
+== Rocq findings <sec:discuss:itp>
+
+This section discusses results related to interactive theorem provers/proof assistants such as Rocq. In particular, we discuss @sec:rocq. We believe that much of what we find in that section is already known among the experts of the formal methods and programming language communities. However, as these findings were highly non-obvious to us and they are related to an important trade-off we discuss further in @table:veriftradeoff, we mark them as important. Initially, based on the reading we did on developing large projects in Rocq (see e.g. @chlipala2013CPDT), we thought that automation was critical and very helpful to developing proofs. However, this is not what we experienced. We discuss this in the next subsection. 
+
+=== Proof automation <sec:discuss:automation>
+
+As discussed in @sec:rocq:twocat, a large part of our proofs consists of implementation-coupled proof segments. This was contrary to our (naïve) expectation that the majority of proof lines would be dedicated to conceptual proofs. This was mostly because we hoped automation could shorten the non-conceptual parts. However, we found that developing and understanding automation took more time than simply brute-forcing the proof by hand. Especially once one gets more experience in writing the implementation-coupled proof segments, the cost of switching to automation feels higher. The author was introduced to Rocq through a course structured around the Software Foundations series by Benjamin Pierce @pierce2025lfoundations @pierce2025plfoundations. Software Foundations provides an excellent introduction to writing proofs by hand and cultivates deep understanding. However, while automation is extensively covered, it is mostly as an afterthought. Therefore, the author only began considering automation after he had become quite familiar with Rocq. This might have shaped our difficulties with automation.
+
+Consequently, we present no major results that make use of automation other than predefined tactics such as `lia` (which allow solving any goal involving linear arithmetic). Two small exceptions are our development of $Zext$ (although this is mostly a wrapper around `lia`) and our use of automation in proving lemmas related to tightening holes for both lower and upper bounds (again, mostly as a wrapper around `lia`). We expect Rocq experts to make better use of automation to potentially simplify many of our implementation-coupled proofs. However, we remain skeptical that this will bring huge benefits to future developments, as new checkers will use fundamentally different reasoning.
+
+=== Limitations
+
+Our findings working with Rocq are mostly based on anecdotal evidence. Our original research questions were mainly concerned with the algorithmic side of developing checkers, not with their formal verification. We did not perform any systematic comparison of using different approaches to formal verification, nor did we perform a thorough review of the literature on _how_ to do formal verification. We are therefore very careful to assume any kind of generalization of our findings on using Rocq. Instead, we report them mostly to encourage future work and report some simple lessons we learned as we developed the checkers.
+
+== Building blocks and utilities <sec:discussion:lego>
+
+#let listxlink(name) = codelink("Utility", name, module: "ListEx")
+
+One of our supporting goals was to find building blocks and utilities that could be reused for future inference checkers. Perforated intervals are the most important ones we found and have been detailed in the previous section. In this section, we list a number of other useful utilities that we believe might be useful for future developments. We did not study them in detail. Hence, we only mention them briefly.
+
+- Overall, our `Utility.v` (#codefilelink("Utility")) file consists of over 2000 lines. This is not necessarily a good thing, but it shows that a large part of our proof developments were deemed to be useful outside of the checker for which we initially needed them.
+- We developed a theory of "sublists" (#codelink("Utility", "", module: "SubList")), a subset-like relationship for lists (and equivalent to it if both lists have no duplicates) that requires the existence of a list such that the permutation of this list appended to the "sublist" equals the larger list. This is equivalent to requiring that each element in the sublist occurs less than or equally as frequently in the larger list. Originally, this was a critical concept in our cumulative checker, but the role is now smaller after a refactor, so that the checker no longer relies on activity names and can have duplicates. However, it has allowed proving a number of useful facts more easily, particularly about lists having no duplicates. It is also an interesting contribution in its own right.
+- We provide various "list extensions" (#codelink("Utility", "", module: "ListEx")), which consist of a number of combinators and useful utilities related to lists. The most used was `flat_map_option` (#listxlink("flat_map_option")), which fulfills the useful function of applying a function with an optional return value to a list and only retaining elements where the function evaluates to a `Some` value. It does this in a single linear pass, but we provide an equivalence proof by first filtering all elements that will return `None` and then applying a `map` with the function. This simplifies many proofs, as we can use the extensive machinery that the Rocq standard library contains for the standard `filter` and `map` operations. It also allows defining our own lemmas in terms of `filter` in `map`, so that we do not have to create a special case for `flat_map_option` everywhere, and do not have to work from the function's definition. We also provide `map_valid`  (#listxlink("map_valid")), which also works on a function with an optional return value, but early returns with `None` if even a single value in the list evaluates to `None`.
+- We make induction proofs using `fold_left` easier by introducing a fold induction lemma for `fold_right` that removes the need for separately defining recursive functions with a general initial value: useful when only one specific value is used. However, `fold_left` is generally more efficient as it is tail-recursive. This can often be remedied by rewriting `fold_left` in terms of `fold_right`, showing that it still holds for a reversed list, and then applying our `fold_ind` (#codelink("Utility", "fold_ind", module: "ListEx")) lemma. We are sure there are ways to automate this, but we have not found the need or time.
+- We define min and max operations over lists of integers and give formal specifications and correctness proofs (#codelink("Utility", "", module: "ZMaxMinList")).
+- We provide a useful `range` (#codelink("Utility", "range", module: "ZRange")) function that computes the range from a starting integer to an end integer, as well as various facts about it. This function is critical for our cumulative implementation, as we rely on it to give us an ordered interval. See also @check:cumul:impl. 
+- We provide `MSet` (#codelink("Utility", "", module: "Sets")) and `MMap` (#codelink("Utility", "", module: "Maps")) instantiations, as well as useful helper functions and lemmas for any type with the usual Leibniz equality (which includes the integers, strings, and many similar types), such as `build` that can construct a set given a list of elements. For `MMap` in particular, we prove many details for string maps (particularly about their keys, such as filtering the entries of a map based on keys), but these could easily be generalized.
+- Our `CumulativeUtil.v` (#codefilelink("CumulativeUtil")) file similarly contains nearly 600 lines, which could be reused by constraints with a similar activity and usage model as cumulative. We highlight our development of `has_n_true`, used to determine if activities can be scheduled. 
+
+== Limitations <sec:discussion:limits>
+
+In addition to the limitations of each of our individual contributions, we also mention a few limitations of our work as a whole.
+
+=== Empirical validation of practical significance <sec:discuss:empirical>
+
+Our work contains no experimental section. Consequently, we cannot empirically validate whether our work can be used in practice. This is a significant limitation and makes it difficult to compare with approaches that are already used in practice.
+
+The primary reason is that this thesis is part of a larger collaborative effort @sidorov2025checker, and a number of components that are necessary to run the checker on non-toy examples were not yet available when this work reached its final stage:
+
+- The extraction from Rocq to OCaml has to be set up and optimized.
+- A parser that can transform constraint programming models into the checker's data model. This parser will be written in OCaml.
+- A parser that can parse proofs into the checker's data model (which also requires reading from a file, among other things). This parser will be written in OCaml.
+- The individual proof step checkers had to be combined into a single implementation (mostly completed, but only in the last stage of this work, which also required some refactoring of our implementations).
+
+Therefore, our results are primarily theoretical, although when the above components are completed, the results are expected to also be of practical significance, as the preliminary results are encouraging. We refer to Sidorov et al. @sidorov2025checker for the results. 
+
+=== Formal verification trade-off
+
+As discussed more specifically in @sec:discuss:itp, formal verification is a difficult task. Its main drawback, in our view, is the required time investment. Everything is possible, and even complex implementations and optimizations are all provable, but this often causes a nonlinear increase in proof complexity. Extending our checker with additional constraints requires implementing the entire inference checker in Rocq. We do note that richer hints, discussed in @sec:discuss:hints, might alleviate some of this. However, as an example, checking an activity conflict in a cumulative timetable propagation fundamentally requires checking a condition for many timepoints. Doing this in a reasonably efficient way requires taking into account the ordering, among other difficulties.
+
+This compares unfavorably with an approach such as the one taken by Gocht et al. with VeriPB and CakePB @gocht2022certifying (or any approach where the verification language is more limited). In their approach, reasoning can be explained in pseudo-Boolean terms by an unverified implementation. Only the encoding must be trusted, which means that when adding an additional constraint with a similar level of trust as our checker (meaning that the checker's soundness is formally verified), only the encoding of that constraint into pseudo-Boolean constraints and variables has to be formally verified. The checker reasoning also requires implementation, but this can happen using an untrusted program and does not affect soundness.
+
+We summarize the _formal verification trade-off_ in @table:veriftradeoff. We do not specifically list pseudo-Boolean as the approach, as it applies to any approach that encodes the proof in a language more limited than what CP is capable of. Note that in the first published version of our checker, we do not expect to formally verify the model parsing. However, since this is not an _encoding_ (it is a direct translation and we can call it parsing), it is much less complex and less prone to error. Below, we assume we would want to verify this in order to achieve the same level of trust.
+
+#figure(
+  table(
+    columns: 3,
+    
+    // header row
+    [*Criteria*], [*Limited language*], [*Sidorov et al.*],
+    [Encoding verification], [Yes ($+-$)], [Yes ($+-$)],
+    [Reasoning verification], [Only core language, not constraint-specific ($+$)], [Core language and for each inference rule ($-$)],
+    [Conceptual difficulty of encoding], [Medium, must be converted into limited language ($-$)], [Low, can be directly modeled ($+$)],
+    [Conceptual difficulty of reasoning], [High, must be converted into limited language reasoning ($minus minus$)], [Medium, must be translated into functional algorithm ($++$)],
+    [Encoding performance], [Slow, verified and requires larger size due to limited language ($-$)], [Medium, verified but potentially same size as original model ($+$)],
+    [Checking performance], [Medium to incomparable, reasoning must be checked by verified implementation, but can be generated by unverified implementation, which does need to do more work ($+-$)], [Medium to incomparable, reasoning must be verified by verified checker, but proofs can be smaller as reasoning can be translated more directly ($+-$)],
+    [Formal verification complexity], [Low, only encoding and core language ($++$)], [High, every inference rule checker must be formally verified ($minus minus$)]
+  ),
+  caption: [Comparison of formal verification tradeoff between an approach that translates a CP problem into a more limited language (such as SAT or pseudo-Boolean constraints) and our approach. $--$ indicates singificant weakness, $+-$ indicates neutral, $++$ indicates significant strength. ]
+) <table:veriftradeoff>
+
+One limitation of the above table is that it is mostly a qualitative comparison. It is possible that practical concerns change the balance. We claim that our approach is _conceptually_ lighter, as it can be translated more directly from pre-existing propagation algorithms, but requires more code to be formally verified (each individual inference checker). We believe this formal verification is arduous primarily due to the large amount of data structure manipulation (see @sec:rocq:twocat).
+
+In summary, we believe the burden of formal verification to be the major limitation of this work, as it threatens the generalizability of our methods. This generalizability is simultaneously our greatest strength. Experimental results in Sidorov et al. @sidorov2025checker might reveal more practical limitations. 
+
+== Future work <sec:discussion:future>
+
+We conclude our discussion by mentioning recommendations and possible future work. We start with more fundamental directions and finish with a number of subsections, mostly related to hypothetical performance improvements.
+
+=== Hints <sec:discuss:hints>
+
+In many cases, verification could be sped up or simplified significantly when provided with a hint that has richer information than just the inference rule and the constraint. Furthermore, these hints can help to characterize the conflict types we mentioned in @proc:methodinf or even simplify the checking algorithm. For each of the propagator inference checkers in the CP proof checker, we discuss the value of hints. We conclude by mentioning some practical concerns.
+
+In the case of *cumulative*, if the checker knows it is supposed to look for a time conflict at a specific time, it only needs to look at which activities are mandatory at that time, which means the time complexity is suddenly only $O(n)$, where $n$ is the number of activities. In the case of an activity conflict, for cumulative, we cannot do better than just checking the activity's entire domain, and due to the fact that we have access to the right-hand side of a fact, we know which activity was propagated. However, if the consequent is empty, it is still possible for there to be an activity conflict. Currently, we must check for all activities to see if they can possibly be scheduled. Instead, if a hint containing the violating activity was provided, we could prevent this unnecessary work (providing a speedup by a factor of $n$).
+
+In the case of *alldifferent*, the set of variables that are conflicting could serve as the hint. If the solver knows this set, it should simply log a fact that includes only variables of this set, which would make this unnecessary. However, it is possible to envision a solver implementation that performs no propagation and only performs a conflict check. It could try to find a maximum matching and report a conflict if the maximum matching does not cover every variable. Only including the variables in the maximum matching would not constitute a valid fact, so the propagator could decide to simply include the domain of every variable. Since it does not do any propagation, it would not perform @proc:findhall. However, the matching is still useful information and could serve as a hint. In that case, the verification algorithm would only have to implement @proc:findhall, which is much better than also having to implement a full matching algorithm.
+
+In the case of *linear inequalities*, we do not see any use for hints. This is because checking a conflict simply involves evaluating the inequality's left-hand side. This always requires knowledge of all variable bounds, which will always be carried by a valid fact.
+
+We see that hints can provide significant speedups and potentially simplify algorithms. However, we do mention at least one practical concern. Preferably, the parsing of a proof would not require complicated logic that depends on the constraint. However, in the case of cumulative, the hint might be a single variable name or an integer. In the case of alldifferent, it could even be a set of variables. If hints are added to the proof system, this would therefore add significant complexity to the parsing, which is currently unverified. Furthermore, how to exactly represent these hints in the checker itself might also be complicated, as they are of different types. More constraints would have to be evaluated to see if the benefits outweigh the costs.
+
+=== Perforated interval unions
+
+Currently, the alldifferent checker computes the union of domains by first materializing domains as lists of elements and then adding them all together in a new set, which is then used to determine the size of the union. However, this materialization process involves the creation of many new sets and intermediate data structures. We expect this to be the main bottleneck of the alldifferent checker.
+
+An improved implementation would not construct any new sets, but simply update the perforated interval by computing the union in the following way:
+
++ Given two bounded perforated intervals $dom_1$ and $dom_2$, ensure the least upper bound and greatest upper bound between them. 
++ Then, take the perforated interval with the fewest holes. For each hole, check whether it is outside the least upper bound and greatest upper bound computed in the previous step. If it is, remove it from the domain. Then, check if the hole exists in the other domain. If it does not, remove it from the domain.  
++ Now, update the bounds of the perforated interval with the fewest holes (some of which might now have been removed) with the new least upper bound and greatest upper bound. 
+
+Over a group of perforated intervals, the result would be equivalent to the intersection of the holes of all perforated intervals, while its lower bound would be the minimum of all lower bounds, and its upper bound the maximum of all upper bounds. While this might increase the complexity of the proofs, we believe this will improve performance by no longer requiring the construction of sets and performing fewer traversals. Furthermore, this does not require the construction of ranges, as opposed to our (naive) implementation of domain materialization.
+
+=== Cumulative timepoints
+
+Our implementation of a cumulative checker is based on a very simplified cumulative propagator that considers every time point. This means that more fine-grained time domains would reduce performance. Efficient implementations of cumulative timetable propagation @letort2012scalesweep @ouellet2013cumulative only consider the different intervals between step changes in the resource profile heights. These step changes occur because activities become mandatory or stop being mandatory at those times. The profile remains constant between those steps. Since for each activity there are at most two events (start or stop being mandatory) that can cause step changes, the computation's time complexity now depends only on the number of activities and not on the number of timepoints. 
+
+We expect that applying this optimization will not significantly affect the difficulty of computing time conflicts. However, we expect large implications for our implementation of detecting activity conflicts, because the different points of a profile will now represent different lengths of time. An activity also does not necessarily need to start only at one of the step changes; it still has the freedom to start at any time point. Therefore, our strategy of computing for every time point whether an activity can be active cannot be simplified as easily. A more careful study of these efficient algorithms is needed to come up with solutions.
+
+=== Study of formal verification
+
+In @sec:discussion:limits we mention that one of the greatest limitations of the CP-native approach is the greater formal verification burden. However, while we report some limited findings about using Rocq (@sec:rocq), we mention in @sec:discuss:itp that we do not assume they will generalize and that they were not obtained through any kind of systematic data-based approach.
+
+Therefore, we believe that this is a promising direction for future work. In particular, this work approaches the problem mostly from the constraint programming direction. Future work could approach the problems more from the formal methods direction. In particular, we believe that it should be possible to address most of the limitations we mention in @sec:discuss:prop, as our results do not contain any methodology on how to approach the formal verification part.
+
+=== Summary of other points
+
+We also summarize points related to future work mentioned in earlier parts of the Discussion or too short to merit their own section:
+
+- Perforated intervals could be replaced by a more compact representation in the proof format. Alternatively, parsing can convert atomic constraints into domains. This would still require modifying the proof _system_ and specification of the checker (@sec:discuss:perfint:alts).
+- The implementation of the holes set could be replaced by other implementations than our enumerated set (which is itself implemented using red-black trees)  (@sec:discuss:perfint:alts).
+- Proof automation could be improved, as we make little use of it other than `lia`. This could help reduce the relative amount of implementation-coupled proof lines vs. conceptual proof lines (@sec:discuss:automation).
+- Empirical evaluations are missing (@sec:discuss:empirical). These will be found in Sidorov et al. @sidorov2025checker.
+- The parsing of problem models into the checker's data model could be formally verified. Note, parsing proofs does not need to be formally verified, as we care only about the conclusion. If the parsing invalidates the proof, the checker will simply reject. If it happens to turn an invalid proof into a valid one, the conclusion will still be correct.
+- Variables currently use string identifiers. If we change them to use the Rocq `positive` datatype (Coq's `Z` implementation is based on it), which uses a binary representation, this would unlock potentially more efficient map data structures @appel2022efftrie. Furthermore, they would have the benefit of being _extensional_, meaning two maps containing the same entries are equal under Coq's Leibniz equality. This can simplify proofs. However, these are currently not yet part of the `MMap` @mmaps2024 library that is used by the checker, although they have been proposed @palmskog2024mmappr10. 
+- Clearly, it is interesting to extend the checker with additional constraints. We recommend first implementing additional propagators for cumulative, such as energetic reasoning, as these can reuse many components from cumulative while still testing the methodology. Furthermore, extensions of alldifferent, such as the global cardinality constraint, might be able to reuse parts of its checker. 
+  On the other hand, there are also constraints that differ significantly from those two, which could further test the limits of our methodology. These include constraints such as element and circuit.

@@ -1,0 +1,794 @@
+= Background <sec:background>
+
+#let fact = jmono[fact]
+#let assgn = jmono[assignment]
+#let checker = jmono[cumulative_checker]
+#let truev = `true`
+#let premises = jmono[premises]
+#let consq = jmono[consequent]
+#let dlb = spro[lb]
+#let dub = spro[ub]
+
+#let ttrue = raw("true")
+#let ffalse = raw("false")
+
+#let boolatom(content) = {
+  $bracket.double #content bracket.r.double$
+}
+
+#let start = jmono("start")
+#let lower = jmono("lower")
+#let upper = jmono("upper")
+#let bounds = spro("bounded_acts")
+#let duration = jmono("duration")
+#let resprofile = spro("profile")
+#let capacity = jmono("capacity")
+#let usage = jmono("usage")
+
+#let cD = $cal(D)$
+#let cX = $cal(X)$
+
+
+== Constraint Programming
+
+We begin with a formal treatment of constraint programming, see also Rossi et al. @rossi2006handbook and Apt @apt2003principles.
+// Compared to the standard definitions of e.g. @rossi2006handbook, which are more set-oriented, we choose more "functional" definitions that are more convenient for formal verification.
+
+#definition(title: [Domain])[
+  A _domain_ $cD$ is a mapping from a set of variables $cX$ to sets that represent the values a variable is allowed to take. For any variable $x in cX$, we require $cD(x) subset.eq ZZ$.
+]
+
+In the theory of constraint programming, it is possible to replace $ZZ$ with other sets. However, our approach is tailored to integers. It is also common to work only with finite domains, because a complete solver can then be constructed using a simple backtracking procedure. Most practical solvers also require this, but for our purposes, this is not important. In fact, the primary domain representation introduced in this work supports infinite subsets of $ZZ$. 
+
+
+
+#definition(title: [Assignment, #speccdlink("Assignment")])[
+  Given variables $cal(X)$, an _assignment_ is a mapping $theta: cal(X) -> ZZ$. Such a $theta$ is said to be _consistent_ with respect to a domain $cal(D)$ if for all $x in cX$, $theta(x) in cD(x)$. We use $Theta(cal(X))$ to refer to the set of all possible assignments over $cX$.
+] <def:assignment>
+
+#let Dcross = $D_times (X)$
+
+// We consider only finite sets of variables. We use $Theta(cal(X))$
+
+#definition(title: [Constraint])[
+  Given variables $cX = {x_1, ..., x_n}$, a _constraint_ is a predicate $c: Theta(cX) -> {ttrue, ffalse}$. An assignment $theta$ _satisfies_ a constraint $c$ if $c(theta) = ttrue$. A domain $cD$ _satisfies_ a constraint $c$ if every assignment consistent with $cD$ satisfies $c$.
+] <def:constraint>
+
+For a constraint to be practical, we expect it to be a computable function that terminates in polynomial time.
+
+#definition(title: [CSP])[
+  A _Constraint Satisfaction Problem_ (CSP) is a triple ($cal(C)$, $cal(X)$, $cal(D)$), where $cal(C)$ is a set of constraints, $cal(X)$ is a set of variables and $cal(D)$ is a domain (for the set of variables $cX$).
+]
+
+#definition(title: [Solution])[
+  An assignment $theta$ is a _solution_ to a CSP $(cal(C), cal(X), cal(D))$ if for all $c in cal(C)$, it holds that $c(theta) = ttrue$, i.e., the assignment satisfies all constraints.
+]
+
+We call a CSP satisfiable if there exists at least one solution. A solution then serves as a certificate for the satisfiability claim of a CSP. Checking whether the claim holds only requires checking whether the solution satisfies every constraint. This is not a hard problem.
+
+A more general problem is the _Constraint Optimization Problem (COP)_, which includes, in addition, an objective function that must be either minimized or maximized. Suppose we have such a COP, which consists of a CSP $(cal(C), cal(X), cal(D))$ and an objective function $f(cal(X))$. We can verify optimality by first checking that the optimal solution with objective $p^star$ satisfies the underlying CSP and second by determining that the underlying CSP with the addition of the constraint $f(cal(X)) > p^star$ (or $<$ in the case of a minimization problem) is unsatisfiable. For this reason, we will now concern ourselves only with CSPs and infeasibility and will often use the term "CP (Constraint Programming) problem" to refer to a CSP.
+
+We now provide a few simple examples to show how the earlier definitions work.
+
+#example(title: [Linear inequality])[
+  A linear inequality $x + y <= 20$ is then formally a function $c$ that takes an assignment $theta$ that returns $ttrue$ if $theta(x) + theta(z) <= 20$. Let an example assignment be $angle.l theta(x) = 90, theta(y) = 2 angle.r$. This assignment does not satisfy $c$, as we have that $90 + 2 lt.eq.not 20$. However, the assignment $angle.l theta(x) = 12, theta(y) = -17 angle.r$, _does_ satisfy $c$. 
+] <ex:asgndom>
+
+#example(title: [CSP and solution])[
+  Consider the same variables as in @ex:asgndom, as well as the constraint $c$. Furthermore, consider the domain $angle.l cD(x) = [0, infinity), cD(y) = [4, 100] angle.r$ and a second constraint $c'$ representing the equation $y != 20$. Then $({c, c'}, cX, cD)$ is a CSP. Furthermore, the assignment $angle.l theta(x) = 12, theta(y) = 4 angle.r$ is a solution to the CSP.
+]
+
+When domains are finite, practical CSP solvers will eventually enumerate all solutions. However, they speed up this process by interleaving search with reasoning that makes use of the problem's structure. This reasoning is called _propagation_ or _filtering_ and cuts off parts of the search space that cannot be part of any feasible solution. This happens by explicitly pruning the currently stored domains. 
+
+
+In the next two sections, we discuss two different constraints, alldifferent and cumulative. These were selected based on a combination of popularity and intuition about how challenging they would be to verify. During the discussion of these constraints, we also introduce the intuition necessary for verifying the reasoning performed during propagation. 
+
+
+
+
+// #show: thmrules.with(qed-symbol: $square$)
+#let proof = proofblock(inset: (x: 0.5em, y: 0.5em))
+
+#let sketch = mathblock(
+  blocktitle: "Proof sketch",
+  prefix: [_Proof sketch._],
+  suffix: [#h(1fr) $square$],
+)
+
+== Alldifferent <sec:prelim:alldiff>
+
+We first introduce the alldifferent constraint, which allows constraining variables to take on distinct values. 
+
+#let alldifflink(name) = codelink("AlldifferentCheck", name)
+
+#definition(title: [Alldifferent, #alldifflink("Alldifferent_l")])[
+  Given a set of variables $X$, the _alldifferent$(X)$_ constraint is defined to return #ttrue given an assignment $theta$ if for all pairs $x, y in X$ s.t. $x != y$, we have that $theta(x) != theta(y)$.
+]
+
+Particular algorithms used to prune domains for a particular type of constraint are known as _propagation algorithms_. We will not discuss the exact requirements for an algorithm to qualify as a propagation algorithm, as for our purposes, we need only to understand that they map domains to domains. We refer to @schulte2009weakmonotonprop and @rossi2006handbook (§14.1.1) for details.
+
+As alldifferent is a popular and simple (in the sense that it is simple to define, as it is not simple to solve) constraint, there are many different propagation algorithms (see e.g. @downing2012explainalldiff for algorithms for modern CP solvers and the earlier @vanhoeve2001alldifferent for a broad survey). Propagation algorithms can be differentiated not only by their time complexity but also by their propagation strength. The following section will introduce a way to characterize this, called _local consistency_.
+
+=== Local consistency
+
+Consider the following example.
+
+#let alldiff = jmono[alldifferent]
+
+#example(title: [Bounds consistent propagation])[
+  Let $c = alldiff(x, y_1, y_2, z_1, z_2)$, $cD(x) = {1, 2, 3, 4, 5}$, $cD(y_1) = {0, 1}$, $cD(y_2) = {0, 1}$, $cD(z_1) = {2, 4}$, $cD(z_2) = {2, 4}$. Then we can propagate that $x >= 2$, because if $x$ were equal to 1, $y_2$ and $y_1$ would both have to be zero, which is not allowed.
+] <ex:boundscons>
+
+The propagation removed 1 from the domain of $x$. In fact, we can now say the domain has reached a certain level of _local consistency_, where local indicates we are speaking only of consistency with regards to this one constraint (local) as opposed to the entire problem (global). This specific level of consistency is known as _bounds$(ZZ)$ consistency_ @choi2006boundscons. Loosely, this means that the lower and upper bounds of each variable domain are part of a solution containing only integers that fall between the upper and lower bounds of the domain of their respective variable. We can define this formally as follows (where we assume the domains are all integer):
+
+#definition(title: [Bounds consistency])[
+  An integer domain $cD$ is _bounds$(ZZ)$ consistent_ with respect to a constraint $c$ and variables $X$ if we have that $forall x in X$ and $forall d in {min(cD(x)), max(cD(x))}$, there exists an assignment $theta$ consistent with $cD$ that satisfies $c$ such that $theta(x) = d$ and $theta(x') in [min(cD(x')), max(cD(x'))]$, for all $x' in X$ s.t. $x' != x$.
+]
+
+#example(title: [Check bounds consistenty of domain])[
+  To see why the domains of @ex:boundscons are now bounds consistent after propagating $x >= 2$, we must check the lower and upper bounds of all variables. For all bounds except the new lower bound of $x$, clearly there exists a solution. For $x = 2$, set $y_1 = 0$, $y_2 = 1$, $z_1 = 3$, $z_2 = 4$. Note that setting $z_1 = 3$ is allowed since $3 in [min(cD(z_1)), max(cD(z_1))]$.
+]
+
+There exist polynomial-time propagation algorithms for alldifferent that can achieve this level of consistency. This is not the case for every constraint, since such an algorithm existing for the next constraint we discuss, cumulative, would imply $P = N P$. However, for alldifferent we can actually do even better. The strongest possible form of local consistency is known as domain consistency, which we illustrate in the next example.
+
+#example(title: [Inconsistent values])[
+  While the domains of @ex:boundscons were bounds consistent after propagating $x >= 2$, the domains still contain values that cannot be part of any feasible solution. If $x = 2$, then $z_1$ and $z_2$ would both have to be 4, which is not allowed. Furthermore, if $x = 4$, $z_1$ and $z_2$ would both have to be 2, which is also not allowed. Once we have done this, $cD(x) = {3, 5}$, and there exists a solution containing any value from any domain.
+]
+
+We now give the formal definition of domain consistency. It can be interpreted as requiring that if we fix a variable to some arbitrary value in its domain, there exists at least one assignment satisfying the constraint.
+
+#definition(title: [Domain consistency])[
+ A domain $cD$ is _domain consistent_ (also known as generalized arc consistent or hyper-arc consistent) with respect to a constraint $c$ and variables $X$ if $forall x in X$ and $forall d in cD(x)$, there exists an assignment $theta$ consistent with $cD$ that satisfies $c$ such that $theta(x) = d$ and $theta(x') in cD(x')$, for all $x' in X$ s.t. $x' != x$.
+]
+
+We have seen that propagation algorithms can be differentiated by time complexity and by specific notions of propagation strength (local consistency). This involved some specific examples of propagations. The next subsection discusses how we can formally describe such propagations, which will be an important step towards introducing the proof system for verifying the unsatisfiability of CP problems. This is because, when a solver propagates, it relies on these propagations for its eventual unsatisfiability conclusion. Therefore, the proof system must somehow describe these propagations. Furthermore, the formal description will provide us with a clue about what properties of a constraint we want to use.
+
+== Formal description of propagation outputs <sec:formaldesc>
+
+We now illustrate in an example how a particular propagation output can be described by a simple logical statement, which can then be certified.
+
+#example(title: [Formally describing propagation])[
+  Consider a particular propagation for $c = alldiff(x, y, z)$ that maps the input domain $cD(x) = {3, 4}, space cD(y) = {3, 4}, space cD(z) = {3, 4, 5}$ to $cD'(z) = {5}$ (where the domains for $x$ and $y$ are unchanged). This is because assigning $z$ to 3 or 4 would mean there are not enough possible values for $x$ and $y$. However, if the domains for $x$ and $y$ were different, this might not be valid. 
+
+  To verify this particular reasoning, we want to establish a logical statement representing that, given an assignment $theta$ consistent with particular domains for $x$, $y$, and $z$, we know for sure that $theta(z)$ cannot be 3 or 4 if we also want $theta$ to satisfy $c$. The natural way to represent this is in an implication, where the premises include the initial domains and the constraint being satisfied, and the right-hand side contains what we can then conclude.
+  
+  $ c(theta) = ttrue and theta(x) in cD(x) and theta(y) in cD(y) and theta(z) in cD(z) -> theta(z) != 3 and theta(z) != 4 $
+
+  On the right-hand side, we have written the domain update as $theta(z) != 3 and theta(z) != 4$. In practice, any domain update will remove some values or tighten a bound. This is equivalent to satisfying some additional constraints requiring this removal or a tighter bound. For example, we can write $theta(z) != 4$ as "$theta$ satisfies the constraint $z != 4$". In this case, we could require $theta$ to satisfy the constraint $z >= 5$ or $z = 5$. These constraints, known as atomic constraints, play a fundamental role in many CP solvers and also in the proof system. We use the notation $[x diamond.small c]$, where $diamond.small in {<=. >=, =, !=}$. We can go further and use these even for representing the domains. Furthermore, we will not include $c(theta) = ttrue$ in the statement, leaving this as an implicit requirement, giving:
+
+  #numbered[
+  $ [x >= 3] and [x <= 4] and [y >= 3] and [y <= 4] and [z >= 3] and [z <= 5] -> [z != 3] and [z != 4] $ <eq:genfact>
+  ] 
+
+  We call the above a _generalized fact_, to distinguish it from a more narrowly defined notion of _fact_ that we introduce later in @def:fact.
+] <ex:geninf>
+
+An important property of the above facts is that, as implications, they can be converted to equivalent logical statements with an empty right-hand side, i.e., a fact $p -> q$ is equivalent to $p and not q -> bot$ (where $bot$ indicates conflict or contradiction). @eq:genfact would then be written:
+
+#numbered[
+  $ [x >= 3] and [x <= 4] and [y >= 3] and [y <= 4] and ([z = 3] or [z = 4]) -> bot $ <eq:genfactconfl>
+]
+
+This is valid, since when $theta(z) = 3$ or $theta(z) = 4$, the constraint cannot be satisfied and our implicit premise $c(theta) = ttrue$ is falsified. However, the left-hand side now contains nested structures and both $and$ and $or$ connectives. Instead, consider that facts of the form $p -> q_1 and q_2 and ... and q_m$ are equivalent to a series of facts $p -> q_1$, $p -> q_2$, ..., $p -> q_m$. Hence, verifying @eq:genfactconfl is reduced to verifying the following facts:
+
+#numbered[
+$ [x >= 3] and [x <= 4] and [y >= 3] and [y <= 4] and [z = 3] -> bot \
+ [x >= 3] and [x <= 4] and [y >= 3] and [y <= 4] and [z = 4] -> bot $ <eq:genfactmulti>
+]
+
+Here, we have a very simple structure on the left-hand side, which is simply a specification of a particular domain. During verification, it must then be established that this particular domain would admit no solution. This is often easier than exactly replicating the same right-hand side. Before we give a number of examples where this is the case, we formally define atomic constraints and introduce some useful notation.
+
+#let specpflink(name) = codelink("Spec", name, module: "ProofFacts")
+
+#definition(title: [Atomic constraints, #specpflink("BoundAtomic")])[
+  An _atomic constraint_ is a constraint defined by a variable $x$, $c in ZZ$ and $diamond.small in {<=, >=, =, !=}$, that given an assignment $theta$ returns $ttrue$ if $theta(x) diamond.small c$. For an atomic constraint $a$ (defined by $x, diamond.small$ and $c$), we overload the notation $[x diamond.small c]$ to mean the logical proposition $a(theta) = ttrue$ and $a$ itself.
+] <def:atomic>
+
+#notation(title: [Induced domain and domain as fact l.h.s.])[
+  Let $cal(A) = a_1, a_2, ..., a_m$ be a collection of atomic constraints over the variables $cX$. Then $cD_(cal(A))$ refers to the domain induced by $cal(A)$, so for all $x$ in $cX$,  $cD_(cal(A))(x) = {n in ZZ : forall [x' diamond.small c] in cal(A) "s.t." x' = x, n diamond.small c}$. Furthermore, we will often write facts as $D -> q$ instead of $a_1 and ... and a_m -> q$, in which case $D$ is the domain induced by the fact's actual left-hand side. Furthermore, the fact $D and not q -> bot$ then refers to the fact $a_1 and ... and a_m and not q -> bot$.
+]
+
+We now list a number of examples of why showing conflicts is often a better strategy than running propagation.
+
+- If a propagation algorithm can propagate multiple variables, we might have to check which one matches the propagation we are checking.
+- If the propagation algorithm we use for verifying results in a much stronger propagation that the propagation we are checking, we must use more complex logic to see if it subsumes the propagation we check.
+- If we only implement the strongest possible propagation algorithm in the checker, it might always do a lot of work to find the best possible propagation, even if most propagations we check are actually caught with much simpler logic. 
+- If we are checking a propagation that makes a small change (from e.g. $x >= 3$ to $x >= 4$), the negation might make the domain so small (just $x = 3$), that conflicts can be very quickly detected. For large changes, naturally the negation leads to a larger domain, giving the checker a "hint" that it must do more work.
+
+While most of these downsides can be alleviated by special-case logic, the conflict checking approach captures them all automatically.
+
+#example(title: [Benefits of conflict checking vs propagator reproduction])[
+  Consider two propagators, $p_"weak"$ and $p_"strong"$. Here, $p_"weak"$ is a weaker propagator, so it cannot achieve the same level of domain tightening. Then, a propagator output for $p_"weak"$ might be $D -> [x >= 3]$ and a propagator output for $p_"strong"$ might be $D -> [x >= 5]$. 
+  
+  If we use a verification algorithm based on $p_"strong"$ and input $D$, it would redo the work of the strong propagator and would determine that $[x >= 5]$ can be propagated. 
+]
+
+In practice, the conversion of @eq:genfactconfl to @eq:genfactmulti does not happen during verification. Instead, facts such as @eq:genfact should be rewritten into multiple facts, each with only a single consequent, already during the production of the proof. The two facts we would then encounter in a proof would be the following (note that the facts in @eq:genfactmulti could also occur in the proof if the propagator had actually been given their left-hand side as inputs, in which case it would have found that they are a conflict):
+
+#numbered[
+$ [x >= 3] and [x <= 4] and [y >= 3] and [y <= 4] -> [z != 3] \
+ [x >= 3] and [x <= 4] and [y >= 3] and [y <= 4] -> [z != 4] $ <eq:genfactsplit>
+]
+
+This allows us to now define a strategy for verifying propagator reasoning. 
+
+#procedure(title: "Informal propagator verification strategy")[
+  To verify a propagation of a propagator $p$ for a constraint $c$ that maps domains $D$ to $D'$, we use the following strategy:
+  + Write $D$ as a conjunction of atomic constraints. We again use $D$ to refer to this conjunction.
+  + Write $D'$ as a similar conjunction of atomic constraints $d'_1 and ... and d'_m $, such that $D and d'_1 and ... and d'_m$ represents exactly $D'$. Then, we have a generalized fact $D -> d'_1 and ... and d'_m$ (for this logical statement to be true, we implicitly assume the constraint $c$ to be satisfied)
+    // #footnote[In the SMT literature we would call this making $c$ part of the 'background theory'])
+  + Separate $D -> d'_1 and ... and d'_m$ into separate facts $D -> d'_1$, $D -> d'_2$, ..., $D -> d'_m$.
+  + Verify a fact $D -> d'$ by assuming $D and not d'$ (which represents just another domain) and deriving that $c$ can then not be satisfied, i.e. $D and not d' -> bot$. This requires the construction of an algorithm $V$ that takes $c$ and a domain, and returns $ttrue$ if it can show that $c$ is unsatisfiable under that domain.
+] <proc:verifystrat>
+
+This will be the primary strategy through which we verify the specialized reasoning of propagators for particular constraints. This approach has many benefits, as many practical CP solvers can readily generate such facts (see @sec:solvinglogging, which discusses solving and proof logging in more detail). @proc:verifystrat builds upon previous work in two ways. First, consider the SAT problem, which is exactly a CSP but with Boolean variables and with constraints consisting of Boolean formulas (variables connected by $and$, $or$ and $not$). The SAT community pioneered RUP clauses (reverse unit propagation) @gelder2008rup @goldberg2003unsatcnf, which are also verified by negating the consequent and then deriving a conflict. This was brought to the more general CP context previously by the unpublished work of Gange et al. @gange1certifying.
+
+We have seen, as mentioned in the final step of @proc:verifystrat, that in order to verify a propagation, we must be able to determine when a constraint has no solutions given a particular domain. We now return to alldifferent and discuss what is already known about this in the literature.
+
+== Alldifferent (conflicts)
+
+We seek a way to, given some domain (represented as a conjunction of atomic constraints), determine whether a constraint is unsatisfiable. In the case of alldifferent, there is a powerful theorem (originally by Hall @hall1935representatives, formulated also in @vanhoeve2001alldifferent) that tells us exactly when alldifferent admits a solution.
+
+#theorem(title: "Hall")[
+  Let $C(X)$ be an alldifferent constraint over the variables $X$ and let $D$ be their associated domain. Then there exists an assignment $v(X)$ that satisfies $C$ if and only if for every $K subset.eq X$, we have that $|union.big_(x in K) D(x)| >= |K|$.
+] <thm:hall>
+
+In other words, if there is no solution given a particular domain $D$, then there must exist some subset of variables such that the union of the domains of all these variables is strictly smaller than the number of variables in this subset. Note that we used exactly this principle in e.g. @ex:geninf to derive a conflict. However, this theorem states that in fact _every_ conflict implies the existence of a subset of variables with a smaller domain. This, combined with the fact that the required check to determine whether a subset $K$ is conflicting is very cheap, gives rise to a promising verification algorithm in the case that $K$ is known. First, we formally define the set we are interested in separately from the theorem's statement.
+
+#definition(title: "Tight Hall set")[
+  Let $C(X)$ be an alldifferent constraint over the variables $X$ and let $D$ be their associated domain. Then we call a $K subset.eq X$ a _tight Hall set_ if $|union.big_(x in K) D(x)| < |K|$.
+]
+
+In using the term _tight Hall set_, we follow the terminology of @vanhoeve2001alldifferent. 
+To find a tight Hall set given a fact $F$ (and hence a supposedly conflicting domain $D_F$), we can use a procedure used by domain-consistent propagators algorithms for alldifferent. Since we have not implemented this, we give only a summary. The procedure makes use of graph theory, which we will not describe in detail. This algorithm is originally due to Régin @regin1994alldiff, and we also refer to @vanhoeve2001alldifferent for more details.
+
+#procedure(title: "Find conflicting subset")[
+  1. Determine a maximum matching $M$ on the bipartite graph $G=(X, V, E)$, where $X$ is the set of variables, $V$ is the union of the domains $D$ of the variables in $X$ and $x v in E$ if $v in D(x)$. This matching can be obtained by e.g., Hopcroft-Karp @hopcroft1973maxmath.
+  2. If the maximum matching $M$ does not cover $X$ (if it does, then there is no conflict), let $K$ be the set of variables reachable from the unmatched variables through $M$-alternating paths (this can be found through e.g., breadth-first search). Then $K$ is a tight Hall set.
+] <proc:findhall>
+
+We now move on to a different constraint, which does not have a powerful tool like Hall's theorem.
+
+== Cumulative <sec:prelim:cumulative>
+
+The next constraint, called _cumulative_ @aggoun1993cumulative, is frequently used in scheduling problems, and its language also reflects this. It has many variants, we adapt the definition used by MiniZinc @nethercote2007minizinc @minizinc_cumulative_2024.
+
+#let cumullink(name) = codelink("CumulativeCheck", name)
+
+#definition(title: [Cumulative, #speccdlink("Cumulative")])[
+  Let $A$ be a set of activities, where for each activity $a in A$ there is a fixed processing time $duration(a)$ and resource usage $usage(a)$. Each activity is associated with a variable $start(a)$ that refers to the activity's start time. Then, given an assignment $theta$, an activity $a$ is _active_ at time $t$ if $theta(start(a)) <= t < theta(start(a)) + duration(a)$ (#speccdlink("is_active_at")). There is also a global resource bound $R$. Then, the _cumulative$(A)$_ constraint returns #ttrue given an assignment $theta$ if at each time $t$, the total resource usage of all activities active at $t$ is less than or equal to $R$.
+]
+
+While for alldifferent there exists a polynomial time algorithm that decides unsatisfiability, determining whether a single cumulative constraint has a solution is already NP-hard. In fact, if we had a polynomial time propagator that achieves bounds($ZZ$)-consistency, this would already imply $P = N P$ @baptiste1999satcumul. Let us state an example of a cumulative constraint and a possible propagation.
+
+#example(title: [Timetable reasoning])[@ex:cum:params shows an example of a cumulative constraint with 4 activities. The #lower and #upper columns refer to the lower and upper bounds of the domains of the activities' start times.
+  #figure(
+    table(
+    columns: 5,
+    stroke: (x, y) => (
+      left: if x == 1 { 1pt + black } else { none },
+      top: if y > 0 and calc.odd(y) { 1pt + black } else { none },
+      bottom: if calc.odd(y) { 1pt + black } else { none },
+      right: none,
+    ),
+    
+    // header
+    [*Activity*], [$usage$], [$duration$], [$lower$], [$upper$],
+  
+    // rows
+    [$x$], [1], [2], [0], [10],
+    
+    [$a$], [1], [2], [0], [1],
+    
+    [$b$], [1], [3], [0], [1],
+  
+    [$c$], [2], [3], [2], [3],
+    ),
+    caption: [Activity parameters],
+  ) <ex:cum:params>
+
+  For activities $a$, $b$, and $c$, there are certain times where they are certainly active, their so-called mandatory parts (see @sec:timetable for more details). Consider activity $a$. It starts at either $t = 0$ or $t = 1$. In either case, because its duration is 2, it is active at $t = 1$. Using similar reasoning for the other activities, we can create the following "resource profile", shown in @img:cum:timeline. A square is brightly colored if an activity is certainly active at that time and transparent if it could maybe be active. The height is equal to the activity's usage. We also label the constraint's capacity, which is 2.
+
+  #figure(
+  canvas(length: 1cm, {
+    import draw: *
+    
+    // Set up coordinate system
+    let time-scale = 1.2
+    let usage-scale = 0.8
+    
+    // Draw time axis
+    line((0, 0), (7 * time-scale, 0), stroke: 1pt + black)
+    
+    // Draw usage axis  
+    line((0, 0), (0, 4 * usage-scale), stroke: 1pt + black)
+    
+    // Time axis labels
+    for t in range(8) {
+      content((t * time-scale, -0.3), text(size: 10pt, str(t)))
+      line((t * time-scale, -0.1), (t * time-scale, 0.1), stroke: 0.5pt + black)
+    }
+    
+    // Usage axis labels
+    for u in range(1, 4) {
+      content((-0.3, u * usage-scale), text(size: 10pt, str(u)))
+      line((-0.1, u * usage-scale), (0.1, u * usage-scale), stroke: 0.5pt + black)
+    }
+    
+    // Axis labels
+    content((3 * time-scale, -0.8), text(size: 12pt, [Time $t$]))
+    content((-0.8, 2 * usage-scale), text(size: 12pt, [Usage]), angle: 90deg)
+    
+    // Activity ranges and mandatory parts
+    // Activity a: bounds [0,1], duration 2 → possible at t=0,1,2; mandatory at t=1
+    // Activity b: bounds [0,1], duration 3 → possible at t=0,1,2,3; mandatory at t=1,2  
+    // Activity c: bounds [2,3], duration 2 → possible at t=2,3,4; mandatory at t=3
+    
+    let activities = (
+      (name: "a", possible: (0, 1, 2), mandatory: (1,), color: red, usage: 1),
+      (name: "b", possible: (0, 1, 2, 3), mandatory: (1, 2), color: blue, usage: 1),  
+      (name: "c", possible: (2, 3, 4, 5), mandatory: (3, 4), color: green, usage: 2),
+    )
+    
+    // Draw possible ranges (greyed out)
+    for activity in activities {
+      for t in activity.possible {
+        if t <= 6 {  // Restrict to t=0 to t=7 range
+          let y-offset = if activity.name == "a" { 1 } else if activity.name == "b" { 0 } else { 0 }
+          let height = activity.usage
+          
+          rect(
+            (t * time-scale, y-offset * usage-scale), 
+            ((t + 1) * time-scale, (y-offset + height) * usage-scale),
+            fill: activity.color.lighten(70%).transparentize(30%), 
+            stroke: 0.5pt + activity.color.lighten(50%)
+          )
+        }
+      }
+    }
+
+    // Purple where red and green overlay
+    rect(
+        (2 * time-scale, 1 * usage-scale), 
+        ((2 + 1) * time-scale, (1 + 1) * usage-scale),
+        fill: yellow.lighten(70%).transparentize(30%), 
+        stroke: 0.5pt + yellow.lighten(50%)
+      )
+    
+    // Draw mandatory parts (highlighted)
+    for activity in activities {
+      for t in activity.mandatory {
+        if t <= 6 {
+          let y-offset = if activity.name == "a" { 1 } else if activity.name == "b" { 0 } else { 0 }
+          let height = activity.usage
+          
+          rect(
+            (t * time-scale, y-offset * usage-scale), 
+            ((t + 1) * time-scale, (y-offset + height) * usage-scale),
+            fill: activity.color.lighten(20%), 
+            stroke: 2pt + activity.color.darken(30%)
+          )
+          
+          content(
+            (t * time-scale + 0.6, (y-offset + height/2) * usage-scale), 
+            text(size: 9pt, weight: "bold", fill: white, activity.name)
+          )
+        }
+      }
+    }
+    
+    // Add capacity line (assuming capacity = 3)
+    line((0, 2 * usage-scale), (7 * time-scale, 2 * usage-scale), 
+         stroke: (paint: gray, dash: "dashed", thickness: 1pt))
+
+    content((7.6 * time-scale, 2 * usage-scale), text(size: 9pt, [Capacity]))
+  }),
+  caption: [Timeline showing activities $a, b, c$. Brightly colored blocks indicate when activities are certainly active no matter when they are scheduled. Lightly colored areas indicate when an activity could maybe be active.]
+) <img:cum:timeline>
+
+  Based on this figure, we see that $x$ cannot start at $t = 0$, as then for $t = 1$ the capacity would be exceeded. Similarly, for all times up to $t = 4$. Only at $t = 5$ is there no violation. Therefore, we can propagate $[x >= 5]$ (where we use $x$ to also refer to the start time variable). We can represent this propagation with the following fact:
+
+  #numbered[
+    $ [a >= 0] and [a <= 1] and [b >= 0] and [b <= 1] and [c >= 2] and [c <= 5] and [x >= 0] arrow [x >= 5] $ <eq:cum:fact>
+  ]
+
+  The above reasoning is known as timetable reasoning.
+  
+] <ex:cum>
+
+
+Since we cannot hope for efficient propagation algorithms that achieve any standard form of local consistency, instead we can look at some propagation algorithms for cumulative that achieve weaker filtering.  One of the most important cumulative propagation algorithms is _timetable_, which has $O(n^2)$ @letort2012scalesweep and $O(n log n)$ @ouellet2013cumulative implementations. However, it has rather weak propagation strength. One of the strongest practical propagation algorithms is _energetic reasoning_ @erschler1990energy @baptiste1999satcumul. However, it suffers from a high time complexity, $O(n^3)$. Consequently, it is not implemented in many modern solvers. We therefore focus on timetable propagation here, as it has been the most successful in practice. We also refer to @schutt2011improving for a treatment of cumulative in learning CP solvers.
+ 
+As with alldifferent, to verify propagation outputs such as @eq:cum:fact we must study the type of conflicts that can occur when writing timetable propagations $D -> d$ as $D and not d -> bot$. However, while for alldifferent we have a necessary condition for conflicts, such a condition is not known for timetable propagation conflicts. Our contribution includes the categorization of these conflicts, which is based on the timetable propagation algorithm. We discuss this algorithm in the next subsection.
+
+=== Timetable propagation <sec:timetable>
+
+Given an activity $x$ with processing time $duration(x)$ and starting time variable $start(x)$ with domain $[lower(x), upper(x)]$, then for times $t$ s.t. $upper(x) <= t < lower(x) + duration(x)$ we know that $x$ is active. This can be derived by observing that an activity is active at times $start(x) <= t < start(x) + duration(x)$ and then using the bounds. We say that for such $t$, $x$ is _mandatory_ (#cumullink("mandatory_active")), or _compulsory_. For a visual representation, see @fig:mandpart. We also define the _resource profile_, which for each time $t$ is defined as the sum of the usages of all activities that are mandatory at that time. 
+
+#figure(
+  canvas(length: 1cm, {
+    import draw: *
+    
+    // Example activity parameters - larger mandatory part
+    let lower-bound = 1  // Earliest start time
+    let upper-bound = 4  // Latest start time  
+    let duration = 5
+    let est = lower-bound
+    let lst = upper-bound
+    let ect = est + duration  // 1 + 5 = 6
+    let lct = lst + duration  // 4 + 5 = 9
+    
+    let time-scale = 1.0
+    let bar-height = 0.7
+    let y-center = 0.7
+    
+    // Draw time axis
+    line((0, 0), (10 * time-scale, 0), stroke: 1pt + black)
+    
+    // Time axis labels and ticks
+    for t in range(11) {
+      content((t * time-scale, -0.3), text(size: 10pt, str(t)))
+      line((t * time-scale, -0.1), (t * time-scale, 0.1), stroke: 0.5pt + black)
+    }
+    
+    // Time axis label
+    content((5 * time-scale, -0.8), text(size: 12pt, [Time $t$]))
+    
+    // Draw possible execution range (light bar)
+    rect(
+      (est * time-scale, y-center - bar-height/2), 
+      (lct * time-scale, y-center + bar-height/2),
+      fill: blue.lighten(80%), 
+      stroke: 1pt + blue.lighten(40%)
+    )
+    
+    // Draw mandatory part (darker shaded area) - ensure it's inside the possible window
+    rect(
+      (lst * time-scale, y-center - bar-height/2), 
+      (ect * time-scale, y-center + bar-height/2),
+      fill: blue.lighten(30%), 
+      stroke: 1.5pt + blue.darken(30%)
+    )
+
+    let ts_y = 1.6
+    
+    // Add vertical lines for key times - extend through the execution window
+    // EST line
+    line((est * time-scale, 0), (est * time-scale, y-center + 0.7), 
+         stroke: (paint: green.darken(20%), thickness: 1.5pt, dash: "dashed"))
+    content((est * time-scale, ts_y), text(size: 9pt, [EST], fill: green.darken(20%)))
+    
+    // LST line  
+    line((lst * time-scale, 0), (lst * time-scale, y-center + 0.7), 
+         stroke: (paint: red.darken(20%), thickness: 1.5pt, dash: "dashed"))
+    content((lst * time-scale, ts_y), text(size: 9pt, [LST], fill: red.darken(20%)))
+    
+    // ECT line
+    line((ect * time-scale, 0), (ect * time-scale, y-center + 0.7), 
+         stroke: (paint: orange.darken(20%), thickness: 1.5pt, dash: "dashed"))
+    content((ect * time-scale, ts_y), text(size: 9pt, [ECT], fill: orange.darken(20%)))
+    
+    // LCT line
+    line((lct * time-scale, 0), (lct * time-scale, y-center + 0.7), 
+         stroke: (paint: purple.darken(20%), thickness: 1.5pt, dash: "dashed"))
+    content((lct * time-scale, ts_y), text(size: 9pt, [LCT], fill: purple.darken(20%)))
+    
+    // Add label for mandatory part only
+    content(((lst + ect)/2 * time-scale, y-center), text(size: 9.25pt, weight: "bold", fill: white, [Mandatory]))
+    
+    // Add arrows and annotations - moved to avoid crossing labels
+    // Duration annotation - positioned above the vertical lines
+    let duration_y = 2
+    line((est * time-scale, duration_y), (ect * time-scale, duration_y), stroke: 1pt + black)
+    line((est * time-scale, duration_y - 0.1), (est * time-scale, duration_y + 0.1), stroke: 1pt + black)
+    line((ect * time-scale, duration_y - 0.1), (ect * time-scale, duration_y + 0.1), stroke: 1pt + black)
+    content(((est + ect)/2 * time-scale, duration_y + 0.4), text(size: 9pt, [Duration = 5]))
+    
+    // Bounds annotation - positioned below time axis
+    let starts = -0.7
+    line((est * time-scale, starts), (lst * time-scale, starts), stroke: 1pt + gray)
+    line((est * time-scale, starts - 0.1), (est * time-scale, starts + 0.1), stroke: 1pt + gray)
+    line((lst * time-scale, starts - 0.1), (lst * time-scale, starts + 0.1), stroke: 1pt + gray)
+    content(((est + lst)/2 * time-scale, starts - 0.4), text(size: 9pt, [Start time bounds: [1, 4]]))
+  }),
+  caption: [Mandatory part determination for an activity of duration 5 and start time bounds $[1, 4]$: The mandatory part (dark blue) spans from LST (latest start time = start time upper bound) to ECT (earliest completion time = start time lower bound + duration), as that is when the activity is active no matter where we schedule it (within its bounds).]
+) <fig:mandpart>
+
+// Reasoning about when activities are mandatory, two types of conflict can be identified. Each respond to a feature of timetable propagators,
+Based on these concepts, we describe the basic procedure for timetable propagation in @proc:timetable. Note that more optimized versions exist, but we describe only the simplest form, which also forms the basis of our verification algorithm. In particular, a significant optimization is to not look at any individual time point, but only at the time intervals where the resource profile changes. 
+
+#procedure(title: [Timetable propagator])[
+  + (Determine horizon) Given a cumulative constraint $c$ with activities $A$, determine the constraint horizon, which is $[min_(a in A)lower(a), max_(a in A)upper(a)]$.
+  + (Resource profile) Compute the resource profile for each time in the horizon, which gives a function $P$ that maps times to the remaining capacity at that time after subtracting the usage of each activity that is mandatory at that time. Let $M(t)$ be the set of activities mandatory at $t$, then $P(t) = R - sum_(x in M(t)) usage(x)$.
+  + (Resource profile check) For each time in the horizon, check whether $P(t) < 0$; if it is, report the fact $D(A) -> bot$, where $D(A)$ represents the domains of all activities in $A$. 
+  + (Propagation) Note that for each $t_"start"$ and activity $a$, $a$ can start at $t_start$ if we have $P(t) >= usage(a)$ for all $t$ s.t. $t_start <= t < t_start + duration(a)$. For each activity, a single pass starting from $lower(a)$ to $upper(a)$ can propagate $a >= t'$ if for all $lower(a) <= t < t'$ we have that $a$ cannot start. Similarly, a single pass starting from $upper(a)$ and down to $lower(a)$ can propagate $a <= t'$. The fact is then of the form $D(A) -> [a <= t']$ (or $[a >= t']$ if the lower pass identified a new bound). Furthermore, it is possible for $a$ to not be able to start at any time $lower(a) <= t <= upper(a)$. Then, the fact is of the form $D(A) -> bot$. 
+] <proc:timetable>
+
+We now apply @proc:timetable to @ex:cum, allowing us to find possible propagations in a systematic way.
+
+#example[
+   The times in @ex:cum we said some activities had to be "certainly active" correspond to their mandatory parts. In @table:mandparts we compute the mandatory parts, while in @table:resprofile we compute the resource profile from $t = 0$ to $t = 6$. From this we can also deduce that the first spot with $P(t) > 0$ where $x$ (which has duration 2) can start is indeed $t = 5$.
+
+  #figure(
+    table(
+    columns: 4,
+    stroke: (x, y) => (
+      left: if x == 1 { 1pt + black } else { none },
+      top: if y > 0 and calc.odd(y) { 1pt + black } else { none },
+      bottom: if calc.odd(y) { 1pt + black } else { none },
+      right: none,
+    ),
+    
+    // header
+    [*Activity*], [$upper$], [$lower + duration$], [mandatory part],
+  
+    // rows
+    [$x$], [10], [2], [$nothing$],
+    
+    [$a$], [1], [2], [[1, 1]], 
+    
+    [$b$], [1], [3], [[1, 2]],
+  
+    [$c$], [3], [5], [[3, 4]], 
+    ),
+    caption: [Mandatory parts of activities in @ex:cum],
+  ) <table:mandparts>
+
+  #figure(
+    table(
+    columns: 4,
+    stroke: (x, y) => (
+      left: if x == 1 { 1pt + black } else { none },
+      top: if y > 0 { 1pt + black },
+      bottom: none,
+      right: none,
+    ),
+    
+    // header
+    [*Time*], [*$M(t)$*], [*usages*], [*$P(t)$*],
+  
+    // rows
+    [0], [$nothing$], [$nothing$], [2],
+    
+    [1], [${a, b}$], [${1, 1}$], [0], 
+    
+    [2], [${b}$], [${1}$], [1],
+  
+    [3], [${c}$], [${2}$], [0], 
+
+    [4], [${c}$], [${2}$], [0], 
+
+    [5], [$nothing$], [$nothing$], [2], 
+
+    [6], [$nothing$], [$nothing$], [2], 
+    ),
+    caption: [Resource profile after subtracting constraint capacity of activities in @ex:cum.],
+  ) <table:resprofile>
+] <ex:cum:sys>
+
+
+
+We have seen two different constraints and defined how we can describe the reasoning made by propagators using "facts". Furthermore, we discussed an informal strategy for verifying these facts. Before we discuss this more rigorously and explain these facts can be combined to construct actual unsatisfiability proofs, we look at proofs of unsatisfiability in SAT. Such proofs are already widely used in SAT, which can be seen as a special case of CP. Ideas from SAT have also inspired the CP proof system considered in this work.
+
+
+== Proofs of infeasibility in SAT <sec:satunsat>
+
+The problem of determining whether a solution exists for a CSP that contains only Boolean variables and propositional constraints (in conjunctive normal form) is known as the Boolean satisfiability problem or SAT. Since SAT is NP-complete, many other problems can be expressed in terms of SAT. Furthermore, it is in a way the "simplest" such problem, as variables can only have two possible values. For a detailed discussion of unsatisfiability proofs in SAT, see Heule @heule2021handbookproofs. We draw heavily from it.
+
+In SAT, most proofs of unsatisfiability consist of a sequence of clauses that are redundant with respect to the problem's propositional constraints. A clause is a disjunction of propositional variables or their negation, e.g., $x or not y or z$.
+
+One of the first widely used formats, and the one that played an important role in inspiring the CP proof system we introduce in @sec:proofsystem, is the RUP format. For this, we must first define what a RUP (reverse unit propagation) clause is. This requires introducing the concept of unit propagation.
+
+#procedure(title: [Unit propagation])[
+  Given a clausal constraint $l_1 or l_2 or ... or l_n$, where each $l_i$ is a literal (so a propositional variable or its negation), if every literal except one is $ffalse$, we know that the remaining literal must be $ttrue$. This reasoning is known as _unit propagation_.
+]
+
+#definition(title: "RUP")[
+  Consider a conjunction of clauses $cal(F) = cc_1 and cc_2 and ... and cc_n$ and a clause $cc$. If performing unit propagation on $cal(F) and not cc$ implies a contradiction, then $cc$ is a _reverse unit propagation_ (RUP) clause with respect to $cal(F)$.
+]
+
+We consider an example to make this more intuitive.
+
+#example(title: [RUP])[
+  Let $cal(F) = (x or y) and (not y)$ and $cc = x$. Observe that by unit propagation on $cal(F)$, we must have that $y = ffalse$, which then implies $x = ttrue$. But $not cc$ implies that $x = ffalse$, so $cal(F) and not cc$ implies a contradiction. Note that this is a similar trick to what we do in @proc:verifystrat, where to verify $cal(F) -> cc$ we verify $cal(F) and not cc -> bot$. 
+]
+
+A RUP proof then consists of a sequence of RUP clauses, ending with the empty clause to prove unsatisfiability. A RUP proof can then be verified as described in @proc:rup. Note that it is more standard to traverse the proof in a backwards direction @goldberg2003unsatcnf, but this is not important for our purposes.
+
+#let rr = $frak("r")$
+
+#procedure(title: [RUP proof verification])[
+  Given: a sequence of RUP clauses $rr_1, rr_2, ..., rr_n$ and a conjunction of clauses $cal(F) = cc_1 and ... and cc_m$ that we seek to show is unsatisfiable.
+  1. Set $C := cal(F)$ and $P := rr_1, rr_2, ..., rr_n$.
+  2. Let $rr$ be the first element of $P$ and remove it from $P$. If $P$ is empty, reject the proof.
+  3. Perform unit propagation on $C and not rr$. If this does not lead to a contradiction, reject the proof. Otherwise, move on to the next step.
+  4. If $rr$ was the empty clause, $cal(F)$ is unsatisfiable. Otherwise, set $C := C and rr_1$ and go back to step 2.
+] <proc:rup>
+
+We are now ready to present the CP proof system.
+
+== CP proof system <sec:proofsystem>
+
+The CP proof system considered in this work is exactly the proof system of Sidorov et al. @sidorov2025checker, which is part of the same collaborative effort. Proofs in this proof system are sequences of _facts_, which we already informally introduced in @ex:geninf as a way to describe reasoning performed by propagation. However, facts are not only used to describe propagator reasoning, as we shall soon see. We now define what a fact is and then give its meaning.
+
+// manual
+\
+
+=== Facts
+
+#let specprlink(name) = codelink("Spec", name, module: "Proofs")
+
+#definition(title: [Fact, #specpflink("ProofFact")])[
+  A fact is an implication defined by its #premises and $consq$. For a fact $omega$, $premises(omega)$ is a set of atomic constraints. $consq(omega)$ is a single atomic constraint, or it is empty.
+] <def:fact>
+
+Each of the two lines in @eq:genfactsplit are examples of a fact.
+
+#definition(title: [Assignment satisfies fact, #specpflink("fact_valid")])[
+  Let $omega$ be a fact and $theta$ an assignment. Then $theta$ _satisfies_ $omega$ if, when $theta$ satisfies all atomic constraints in $premises(omega)$, we have that $theta$ also satisfies $consq(omega)$, i.e. $premises(omega) -> consq(omega)$. An empty consequence, written also as $bot$, indicates the "always false" constant. 
+] <def:satisfies_fact>
+
+With the above definitions, we can write a fact $omega$ with $premises(omega) = {a_1, a_2, ..., a_m}$ and $consq(omega) = q$ as $a_1 and a_2 and ... and a_m -> q$. If $consq(omega)$ is empty, we write $a_1 and a_2 and ... and a_m -> bot$. This latter type of fact is known as a _nogood_, which is directly related to the nogoods encountered during CP solving (see @sec:solvinglogging) and shows up as deductions in our proof system (see @ex:deduct for an example). However, nogoods can also show up as inferences when propagators run into conflicts (@eq:genfactmulti contains two examples).
+
+The previous definition refers to a particular assignment. However, we want to say something about any assignment that solves the problem, as this will later allow us to determine when a problem is unsatisfiable. 
+
+#definition(title: [Fact holds for CSP, #specprlink("fact_holds")])[
+  Let $cal(P)$ be a CSP and $omega$ a fact. Then we say $omega$ _holds_ for $cal(P)$, if for every solution $theta$ of $cal(P)$, we have that $theta$ satisfies $omega$.
+]
+
+The previous definitions should make it clear that facts are nothing more than constraints that are redundant with respect to the CSP, meaning they do not change the satisfiability of the CSP.
+
+#showybox(
+  frame: (
+    radius: 0pt,
+    inset: 10pt,
+    thickness: 0.5pt
+  ),
+  sep: (
+    gutter: 10pt,
+    thickness: 0.25pt
+  ),
+  spacing: 14pt,
+  [*_Aside_*],
+  [
+  Given a set of constraints $cal(C)$, where each $c in cal(C)$ is a computable function, we can consider as the underlying proof system something at least as powerful as Peano arithmetic. Then we can express, for a given $c in cal(C)$ and assignment $theta$, $c(theta) = ttrue$ in this proof system (as Peano arithmetic can model the computable functions). Then we can describe the logical truth of a sentence $a_1 and a_2 and ... and a_m -> q$ in this system as the corresponding fact being satisfied by all assignments $theta$ that, for all $c in cal(C)$, satisfy $c(theta) = ttrue$. 
+  ]
+)
+
+We now show that if the fact $top -> bot$ holds for a particular CSP, then that CSP is unsatisfiable. Here we use the notation "$top$" to indicate the constant that is always true, which in our definition of fact corresponds to having no premises.
+
+#lemma(title: "CSP unsatisfiability")[
+  Let $cal(P)$ be a CSP. If the fact $top -> bot$ holds for $cal(P)$, then $cal(P)$ is unsatisfiable.
+]
+#proof[
+  Let $theta$ be a solution to $cal(P)$. Since $top -> bot$ holds for $cal(P)$, it must be satisfied by $theta$. Since the premises are empty, we immediately know that the left-hand side is satisfied. But then the right-hand side must be true. However, this implies a contradiction. We have shown that the existence of a solution implies a contradiction. Hence, there is no solution to $cal(P)$.
+]
+
+The proof system must make it possible to verify that $top -> bot$ is a valid fact. We have already seen how to verify a particular type of fact, namely those used to represent propagator reasoning for a particular constraint (@proc:verifystrat). These "propagator facts" are part of a class of facts we call _inferences_. Their defining factor is that they can be considered independently, requiring only knowledge of their associated constraint. Clearly, unless the CSP contains some trivially unsatisfiable constraint, we cannot do this for $top -> bot$. Instead, the proof format supports deriving new facts from other facts. This allows combining the knowledge of multiple constraints, which is often needed to prove unsatisfiability. It is also closely related to how modern CP solvers work (see @sec:solvinglogging). The following example shows how two different inferences can be combined to derive a new fact, in a process called _deduction_.
+
+#example(title: [Fact derivation])[
+  Consider a particular CSP. The table below gives an example of how a new fact can be derived for this CSP. The third row is the new fact. Furthermore, we have two inference facts (row 1 and row 2) that have already been verified to hold for the CSP and are implied by some constraints numbered i and ii, which can be seen in the "Implied by" column.  The fact we seek to deduce also has information in the "Implied by" column, which in this case refers to the two inferences we need. To see why the fact is implied by the two inferences, consider an assignment such that the left-hand side is satisfied. Then, we know $x in (-infinity, 3]$ and $y in [6, infinity)$. We must then show that the right-hand side is satisfied, which in this case means we must derive a contradiction. Now, fact 1 holds for the CSP, and since our current domain for $x$ implies $x <= 5$, we can record for $z$ the domain $[7, infinity)$. Furthermore, since $y >= 6$, certainly $y != 5$ and hence $z <= 6$. However, this is incompatible with $[7, infinity)$ and hence we have a contradiction. Therefore, fact 3 holds for the CSP.  
+  
+  #proof_table((
+    [1], [$[x <= 5] arrow [z >= 7]$], [i],
+    [2], [$[y != 5] arrow [z <= 6]$], [ii],
+    [3], [$[x <= 3] and [y >= 6] arrow bot$], [1, 2]
+  ), [This proof snippet, consisting of three steps, is an example of how a new fact can be derived from previous ones. The third row is the new fact, which is derived from the previous two.], rules: false)
+] <ex:deduct>
+
+What we saw in @ex:deduct was a _deduction_ step. Facts derived with deduction always have an empty consequence (which makes them nogoods). The next section discusses deduction in more detail.
+
+=== Deduction steps <sec:prelim:deduct>
+
+Deduction derives new facts using a sequence of inferences that are already known to hold for a CSP. Those inferences are all checked individually before they are passed to the deduction step. The deduction step assumes the inferences are in the precise order that allows justifying the nogood. To describe this process precisely, we need to define what it means for an atomic constraint to be satisfied by a domain.
+
+@proc:deduct describes the exact process that we informally followed in @ex:deduct.
+
+#procedure(title: [Deduction check])[
+  Given: a sequence of previously verified facts $cal(I) = angle.l I_1, I_2, ..., I_n angle.r$ and a nogood $N = n_1 and ... and n_m -> bot$ to be verified.
+  1. Let $cal(D)$ be the domain induced by the atomic constraints $n_1 and ... and n_m$. If there is a variable with an empty domain, the nogood is trivially satisfied, generally indicating a mistake. In our implementation, we therefore reject the deduction.
+  2. Let $I = a_1 and ... and a_l -> q$ be the first fact in the sequence $cal(I)$ and remove it from $cal(I)$. If there is no such fact, reject and return that the deduction is invalid. Otherwise, if there exists an atomic constraint $a in {a_1, ..., a_l}$ s.t. $cD$ does not satisfy $a$, reject and return that the deduction is invalid. Otherwise, go to step 3. 
+  3. If $q$ was empty, return that the nogood is valid. Otherwise, update $cD$ with the atomic constraint in $q$ (if $q$ refers to a variable $x$, remove the values from $cD(x)$ that violate $q$). If there is a variable with an empty domain in the updated domain, return that the nogood is valid. Otherwise, go back to step 2.
+] <proc:deduct>
+
+Our claim is now that if @proc:deduct accepts a deduction and if every $I in cal(I)$ holds for a particular CSP $cal(P)$, then $omega$ also holds for $cal(P)$. One of our contributions is the formal proof of this for our specific implementation of @proc:deduct. Note also that the above description does not mention how domains are tracked and updated. That is part of our contribution, see @sec:deduct. 
+
+A _valid deduction_ is defined as a deduction that is accepted by @proc:deduct. For a more formal description of the validity of a deduction, we refer to Sidorov et al. @sidorov2025checker. Their formal description differs from our implementation, as it was developed only after we finished the deduction step.
+
+Now that we know how to combine inferences to deduce new facts, we will discuss precisely what type of inferences there are and how to check them.
+
+=== Inference steps <sec:prelim:inf>
+
+Inferences are facts that, as opposed to facts derived through deduction, can be verified independently. They rely either on a constraint in the original CSP, an initial domain in the CSP (which we can also view as a constraint), or on a previously established fact (which is just a redundant constraint). In general, they could also rely on multiple constraints at once, but this is not important in this work, and hence we will assume they rely only on a single constraint. However, annotating inferences only with their associated constraint is not enough. This is because there are multiple types of derivation possible for one constraint. For example, while in this work we focus on timetable propagation for cumulative, it would be possible to also verify energetic reasoning. To support this, every inference is also annotated with a so-called _inference rule_, which, informally, is the strategy it should use to verify the inference. The formal definition is given in @def:infrule.
+
+#definition(title: [Inference rule])[
+  An _inference rule_ is a predicate that takes a fact $omega$ and a constraint $c$ as input. 
+] <def:infrule>
+
+In the informal @proc:verifystrat (propagator verification strategy), an inference rule corresponds to the algorithm $V$ in the final step. However, instead of a domain, an inference rule takes a fact (which can then optionally be converted into a domain). As stated earlier, it would be possible to construct inference rules that reason over multiple constraints, but we do not consider this case. Hence, we leave it out of the definition. The next definition states when an inference rule is valid.
+
+#definition(title: [Inference rule validity])[
+  An inference rule $cal(R)$ is _valid_ if for all constraints $c$, all facts $omega$, and all assignments $theta$ that satisfy $c$, we have that $cal(R)(omega, c) = ttrue$ implies that $theta$ satisfies $omega$.
+] <def:infrulevalid>
+
+It is easy to show that given a fact $omega$, a CSP with constraints $cal(C)$, a constraint $c in cal(C)$ and a valid inference rule $cal(R)$, $cal(R)(omega, c) = ttrue$ implies that $omega$ holds for the CSP. In practice, an inference rule only works for a particular type of constraint. Such a practical implementation can then be turned into an inference rule by simply rejecting any constraint that is not of the correct type. In fact, the trivial "always false" predicate would be a valid inference rule. Inference rule validity, therefore, only requires _soundness_, not completeness.
+
+In this work, we only develop inference steps related to propagator reasoning. To understand the other types of inference steps, we first present an example of a full deduction proof stage.
+
+#example(title: [Deduction])[ In @proof:fullstage we see a complete example of a deduction stage. Here $c_1$ is an alldifferent constraint over the variables $a, b$ and $c$; $c_2$ is a cumulative constraint with parameters as in @ex:cum:params of @ex:cum; $f_1$ is the fact $[z != 7] -> bot$; $f_2$ is the fact $[z = 7] and [c >= 6] -> bot$. First, notice that the deduction relies on the initial domains that are part of the CSP definition. These are materialized in the deduction using the `domain` inference rule. Furthermore, the deduction relies on previously established facts. Since deduced facts are nogoods, if we were to repeat exactly those facts, we would not know which conclusion to draw from them. Therefore, the `fact_equiv` rule is used to rewrite the nogoods into equivalent facts with the conclusion necessary for this deduction. Then, two propagator inference rules are used, each of which relies on a constraint in the CSP. Finally, the deduction mentions that it relies on exactly the previous 9 steps for its derivation. 
+
+  #proof_table((
+    [1], [$top arrow [x >= 0]$], [`domain`], [$cD_"init" (x)$],
+    [2], [$top arrow [a >= 0]$], [`domain`], [$cD_"init" (a)$],
+    [3], [$top arrow [b >= 0]$], [`domain`], [$cD_"init" (b)$],
+    [4], [$top arrow [b <= 1]$], [`domain`], [$cD_"init" (b)$], 
+    [5], [$top arrow [c >= 0]$], [`domain`], [$cD_"init" (c)$],
+    [6], [$top arrow [z = 7]$], [`fact_equiv`], [$f_1$],
+    [7], [$[z = 7] arrow [c <= 3]$], [`fact_equiv`], [$f_2$],
+    [8], [$[a >= 0] and [a <= 1] and [b >= 0] and [b <= 1] and [c >= 0] and [c <= 3] arrow [c >= 2]$], [`alldifferent`], [$c_1$],
+    [9], [$[a >= 0] and [a <= 1] and [b >= 0] and [b <= 1] and [c >= 2] and [c <= 3] and [x >= 0] arrow [x >= 5]$], [`timetable`], [$c_2$],
+    [10], [$[x <= 4] and [a <= 1] arrow bot$], [`deduction`], [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  ), [Example of a practical deduction stage that makes use of multiple inference types.]) <proof:fullstage>
+]
+
+We now describe the different inference steps in detail.
+
++ _Propagator inference step_: inference step that describes the reasoning of a particular propagator for a particular constraint. Each different propagator and constraint must be explicitly supported, or must be translated to a type of reasoning that is supported by the checker. We aim to develop a methodology that aids in the support of new constraints and propagators in the checker.
++ _Initial domain inference step_: a CSP consists of variables, domains, and constraints. As deductions can only use inferences to support their derivation, the checker supports a special inference step type that uses the initial domain to infer a particular atomic constraint in order for deductions to use the initial domains.
++ _Nogood inference step_: all deduction steps derive nogood facts. If a new deduction step wants to use a nogood in a way other than directly implying a contradiction, it has to be rewritten as an equivalent fact.
+
+The nogood inference step and the initial domain inference step are not part of our contributions, but instead part of the collaborative effort to develop a CP unsatisfiability proof checker. They are therefore not discussed any further. We do mention that the formally verified machinery used to handle and track domains, which is one of our main contributions, was used in their implementation.
+
+Checking propagator inference steps involves the definition of a valid inference rule. In the formally verified checker, this means the implementation of a function with the following signature: `check_inference(fact: Fact, constraint: Constraint) -> bool`. The function should only return true if any solution to the constraint satisfies that fact (this implies inference rule validity for a particular CSP if the constraint is part of the CSP).
+
+We finish this section with a short description of the precise definition of a proof.
+
+=== Proof definition
+
+Our description on paper of a valid proof in the CP proof system of Sidorov et al. @sidorov2025checker is somewhat more informal than what can be found in  @sidorov2025checker. This is because this work was developed concurrently with the formal development of the proof system. Hence, some parts of the implementation predate the formal description on paper of @sidorov2025checker. In particular, this is the case for the deduction step. Now, before we define the notion of proof, we define the different proof steps and their combination into a proof stage.
+
+#let fact = jmono[fact]
+#let rule = jmono[rule]
+#let constr = jmono[constraint]
+#let checkerlink(name) = codelink("Checker", name)
+
+#definition(title: [Inference step])[An inference step $I$ consists of a fact $fact(I)$, a valid inference rule $rule(I)$ and a constraint $constr(I)$.]
+
+Note that in the above definition of an inference step, we leave implicit the fact that we can write the initial domains of a CSP as constraints. Hence, an inference step can also refer to the initial domain of a particular variable. Furthermore, remember that, given the above definition of an inference step, if $rule(I)(fact(I), constr(I)) = ttrue$, we know that $fact(I)$ holds for the given CSP.
+
+#definition(title: [Proof stage, #checkerlink("ProofStage")])[
+  A proof stage $S$ is a sequence of facts $cal(I)$ (the _inferences_) and a fact $fact(S)$ with empty consequence (the _deduction fact_). Given a CSP $(cal(X), cal(D), cal(C))$, $S$ is _valid_ if the following holds: 
+  + (Inference validity) For every inference $I in cal(I)$ we have that $constr(I) in cal(C)$ and $rule(I)(fact(I), constr(I)) = ttrue$.
+  + (Deduction validity) @proc:deduct (deduction check), instantiated with $cal(I)$ and $omega_"deduct"$, returns that the deduction is valid.
+]
+
+#definition(title: [Unsatisfiability proof])[
+  Given a CSP $(cX, cD, cal(C))$, a _proof_ $Pi$ is a sequence of proof stages ($S_1, S_2, ..., S_n$), where a stage $S_k$ must be valid with respect to the CSP $(cX, cD, cal(C) union {fact(S_i) : 1 <= i < k})$. $Pi$ is an _unsatisfiability proof_ if for some stage $S in Pi$, $fact(S) = top -> bot$.
+]
+
+== Constraint solving and proof logging <sec:solvinglogging>
+
+To aid understanding of the proof system, we briefly discuss the connections of the proof steps to CP _solving_ and how it is possible to implement proof logging. We concern ourselves mainly with _learning_ CP solvers, i.e., solvers that use some form of learning close to conflict-driven clause learning (CDCL, see Silva et al. @silva2021handbookcdcl) in SAT. In particular, we consider the architecture known as lazy clause generation @feydy2009rengineered (LCG, see also Schutt @schutt2011improving, §2.4). Many state-of-the-art solvers employ this architecture, and it is also used by the Pumpkin solver @pumpkin2024, which is the solver that supports outputting proofs that can be verified by the CP proof checker.
+
+LCG solvers are characterized by the existence of a high-priority SAT engine as a global propagator that maintains a (lazily generated) propositional view of the problem. Furthermore, other propagators are expected to explain their inferences and conflicts in terms of clauses. These _explanations_ correspond exactly to the formal description of propagation outputs we discussed in @sec:formaldesc. For example, the propagation in @ex:cum (cumulative example) would be explained exactly by @eq:cum:fact. Note that there are often multiple explanations possible (see e.g. Schutt @schutt2011improving), but any valid explanation $D -> q$ requires that $D and not q -> bot$. To see why these explanations are clauses, any atomic constraint $[x diamond.small c]$ can be viewed as a Boolean variable that is true when the constraint is satisfied, and false otherwise. Furthermore, an implication $a_1 and ... and a_n -> q$ is logically equivalent to the clause $not a_1 or ... or not a_n or q$.
+
+We will briefly discuss CDCL. CP solvers perform extensive search, making decisions until a conflict is reached, producing a nogood (i.e., a domain under which the problem has no solutions). The conflict is then analyzed (utilizing the explanations mentioned earlier), improving the nogood. This nogood is then added to the constraint database (it _learns_ the nogood), preventing the solver from returning to this branch of the search tree. Furthermore, it frequently prevents the solver from exploring other fruitless branches. These conflict nogoods are exactly the deduction nogoods in our proof. The inference steps used to derive a particular nogood are then the explanations for the propagations that led to the conflict.
+
+In conclusion, the inferences and deductions correspond to explanations and conflict nogoods that an LCG solver uses even if it does not produce a proof. These can then be used, with hardly any additional logic necessary, to construct a CP proof. Of course, there are still many practical difficulties, for which we refer to Flippo et al. @flippo2024proof.
+
+== Formal verification
+
+The CP unsatisfiability proof checker developed by the collaborative effort this work is a part of is formally verified in Rocq (formerly known as Coq) v8.20 @rocq-8-20 @bertot2004coq. Therefore, all the implementations and formalizations in this work are also done in Rocq. We refer to Peled et al. @peled2019formal for a broad introduction to formal verification. Rocq, which is both an interactive theorem prover and a programming language, allows us to both implement the checker, state its specification, and prove that the implementation adheres to the specification. The proof is machine-checked by Rocq's kernel. This kernel's internal workings are not unlike a type checker. The logic of Rocq is known as the Calculus of Inductive Constructions @mohring2015coic, which is a typed $lambda$-calculus. We will not discuss this logic in detail, as we primarily view Rocq as a tool and do not study it on its own. We do mention that Rocq allows programming with _dependent types_ @nordstrom1990martinlof, a powerful construct that allows types to depend on elements of other types. If we use the example of Bove & Dybjer @bove2009dependent, consider the type $A^n$ of vectors of length $n$ of component type $A$. The type $A^n$ then _depends_ on $n$.
+
+Rocq was chosen for a number of reasons; we highlight two of them:
+
+- Most languages and provers with capabilities similar to Rocq (and including Rocq) are slow. Their expressive machinery weighs them down, and they are often interpreted rather inefficiently. However, Rocq provides a powerful extraction mechanism that allows Rocq code to be compiled to OCaml. While OCaml is not a low-level language and features garbage collection, it has been used for performance-sensitive systems @janestreet2025ocaml and has orders of magnitude better performance than interpreting Rocq directly.
+- It is a mature toolchain that has been used to verify large software projects. For example, an optimizing C compiler known as CompCert has been verified in Rocq @leroy2025compcert. This maturity has many benefits, such as IDE support, an ecosystem of community-developed libraries, and helpful resources.
+
+== Mathematical background
+
+In @sec:prelim:deduct, it was mentioned that a domain is tracked for each variable during the deduction process. These domains need not be finite. For example, the domain induced by a single $>=$ atomic constraint will still be infinite. Therefore, it will be useful to consider an extension of the integers for the domain representation discussed in @sec:perfint.
+
+#let Zext = $ZZ_"ext"$
+
+=== $Zext$ <sec:zext>

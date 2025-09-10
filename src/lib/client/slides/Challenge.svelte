@@ -1,5 +1,5 @@
 <script module>
-  export const animations = 6
+  export const animations = 7
 </script>
 <script lang="ts">
   let props: { animation: number } = $props()

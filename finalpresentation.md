@@ -4,7 +4,7 @@ Hi, everyone. Great to see all of you. Today I'll be presenting my thesis, title
 
 Like many academic titles, it's quite a mouthful, so let's break it down. And don't worry, we'll discuss everything in more detail later. First, Constraint Programming is a paradigm for modeling and solving optimization problems. Unsatisfiability is when a problem has no solution; turns out, it's hard to check this. Proof Checking involves, as the name implies, checking a proof. A proof of what? Well, proofs that problems have no solutions. OR, and that's what I did, proofs of small steps that in the end, together form the proof of unsatisfiability.
 
-TODO? make already clear that step is my contribution!
+todo? make more clear that step signifies my contribution!
 
 # Motivation (slide 2)
 
@@ -28,9 +28,7 @@ So what is now our main challenge? What's the problem that I'm helping to solve?
 
 ---
 
-? am i explaining research gap enough?
-
-<--- 4 minutes
+todo? am i explaining research gap enough?
 
 I've given more detail on CP, unsatisfiability and proof checking (animations) in more detail. Let's move on to the element that makes clear what _my_ contribution is: "step".
 
@@ -38,7 +36,7 @@ Creating an entire proof checker is a large undertaking. This idea of a proof ch
 
 Alright, so what is my part. Proofs consist of a sequence of steps. Each little bit of reasoning performed by a solver to derive unsatisfiability can be seen as a step. Each of these steps needs to be checked individually. There are also different types of steps. So what I focused on in my thesis is checking these individual checks is not : collecting all the steps to see if the claim is true ; but checking the steps themselves.
 
-? diagram to explain this
+todo? diagram to explain this
 
 Research question: how can we developed (hidden: formally verified) proof checkers for individual steps?
 
@@ -82,7 +80,21 @@ Well, no. Because what if _my_ proof, the mathematical proof, is wrong? Well, we
 
 # Maybe more in depth contributions
 
-Now that we 
+Alright, so now you have a full idea of what I've done, let's go over each of my contributions in more detail.
+
+## Checkers and methodology
+
+I will now highlight some important details of the two constraint-specific checkers I implemented.
+
+First of all, my cumulative checker. This was the most difficult of all the things I implemented, by far. I will use it as an example to explain my methodology.
+
+For that ...
+
+## Perforated interval
+
+Let's now look at perforated intervals. Remember, they represent an integer domain, so a set of integers. They can represent any finite set of integers, and even some infinite ones.
+
+They work 
 
 # Discussion
 

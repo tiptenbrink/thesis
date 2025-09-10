@@ -1,5 +1,5 @@
 <script module>
-  export const animations = 3
+  export const animations = 4
 </script>
 <script lang="ts">
   let props: { animation: number } = $props()
@@ -11,34 +11,41 @@
 <div class="h-full w-full p-6 flex flex-col justify-center">
   {#if version === "A"}
     <!-- Version A: Structure-first approach -->
-    <h1 class="text-present-xl font-bold text-center mb-6 text-paars">What is a Step?</h1>
+    <!-- <h1 class="text-present-xl font-bold text-center mb-6 text-paars">What is a Step?</h1> -->
     
     <div class="flex flex-col justify-center h-full space-y-6">
       {#if props.animation >= 0}
         <div class="grid grid-cols-3 gap-6">
-          <div class="p-4 bg-green-100 rounded-lg text-center flex items-center justify-center h-16">
+          <div class="p-4 bg-green-100 rounded-lg text-center flex items-center justify-center h-28">
             <p class="text-present font-bold text-bosgroen">Constraint Programming</p>
           </div>
-          <div class="p-4 bg-blue-100 rounded-lg text-center flex items-center justify-center h-16">
-            <p class="text-present font-bold text-koningsblauw">Proof Checking</p>
-          </div>
-          <div class="p-4 bg-red-100 rounded-lg text-center flex items-center justify-center h-16">
+          <div class="p-4 bg-red-100 rounded-lg text-center flex items-center justify-center h-28">
             <p class="text-present font-bold text-bordeaux">Unsatisfiability</p>
+          </div>
+          <div class="p-4 bg-blue-100 rounded-lg text-center flex items-center justify-center h-28">
+            <p class="text-present font-bold text-koningsblauw">Proof Checking</p>
           </div>
         </div>
       {/if}
       
       {#if props.animation >= 1}
-        <div class="flex justify-center">
-          <div class="p-4 bg-purple-100 rounded-lg text-center flex items-center justify-center h-16 w-64">
+        <div class="grid grid-cols-3 gap-6">
+          <div></div>
+          <div class="p-4 bg-purple-100 rounded-lg text-center flex flex-col items-center justify-center h-28">
+            {#if props.animation == 1}
             <p class="text-present font-bold text-paars">Step</p>
-          </div>
+            {:else if props.animation >= 2}
+            <p class="text-present font-bold text-paars">Step</p><p class="text-present-small">My contribution!</p>
+
+            {/if}
+                      </div>
+          <div></div>
         </div>
       {/if}
       
-      {#if props.animation >= 2}
+      {#if props.animation >= 3}
         <div class="text-center">
-          <p class="text-present-small">Project collaboration:</p>
+          <p class="text-present-small">CP proof checker project with:</p>
           <p class="text-present-small"><strong>Maarten Flippo, Konstantin Sidorov, Emir Demirović</strong></p>
         </div>
       {/if}

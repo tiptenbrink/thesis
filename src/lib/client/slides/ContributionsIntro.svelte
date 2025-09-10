@@ -5,7 +5,7 @@
   let props: { animation: number } = $props()
 </script>
 
-<div class="h-full w-full p-6 flex flex-col justify-center bg-gradient-to-br from-gray-50 to-white">
+<div class="h-full w-full p-6 flex flex-col justify-center">
   <div class="text-center">
     <h1 class="text-present-xl font-bold mb-8 text-gray-800">My Contributions</h1>
     

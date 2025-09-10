@@ -1,0 +1,794 @@
+
+The _extended integers_, denoted $Zext$, are defined as $ZZ union {-infinity, plus infinity}$. They are not as well studied as the extended _real_ numbers, which have applications in e.g., measure theory. We could not find any formalization and found only mentions as examples in a general theory on compactification in topology @peschke1990endstheory. We do note we are not the first to use it in CP, see e.g. @caballero2013typeext.  Since we are not concerned with performing arithmetic on them and use them only to define an order, we do not suffer from the fact that some arithmetic operations (such as $infinity - infinity$) do not have a natural definition.
+
+==== Operations
+
+We define comparison on $Zext$ such that $-infinity <= x <= +infinity$ holds for all $x in Zext$ and when $x, y in ZZ$ we also have $x <=#sub[#Zext] space y$ when $x <=#sub[$ZZ$] space y$. This defines a total order.
+
+We also define the $max$ and $min$ operations in the natural way, where we have, for example, $min({n, +infinity}) = n$ for $n in ZZ$.
+
+#pagebreak(weak: true)
+
+= Related work <sec:relatedwork>
+
+Unsatisfiability proofs are not standard in CP. In fact, in the 2023 and 2024 editions of the XCSP competition @audemard2023xcsp3 @audemard2024xcsp3, and the MiniZinc challenge @tack2023challengeminizinc @tack2024challengeminizinc, the only solver with support for generating proofs of infeasibility was the Pumpkin solver @pumpkin2024, which is the solver that pioneered the format and proof system used in this work @flippo2024proof @sidorov2025checker.
+
+Instead, we must look to the SAT and SMT communities, where unsatisfiability proofs are already widely used. In fact, unsatisfiability proofs have been mandatory for solvers participating in the unsatisfiability track of the SAT Competition since 2013 @sat2013. For more information on unsatisfiability proofs in SAT, see @sec:satunsat. 
+
+State-of-the-art SMT solvers such as CVC4, Z3, and veriT also support proof production @barrett2015smtproofs. Barrett et al. @barrett2015smtproofs describe SMT proofs as an interleaving of SAT proofs and SMT-specific theory proofs. Furthermore, their proofs are mostly solver-specific or not fully specified, often requiring running the full solver to verify. Efforts to develop separate checkers often involve describing all reasoning in terms of SAT and use SAT proof formats @bryant2025z3rupitp. 
+
+If we now look at efforts to produce unsatisfiability proofs in CP, we see that these approaches often rely on SAT as well. For example, the solver by Veksler et al. @veksler2010CSPprof can produce proofs that can explain all CP reasoning in terms of SAT.
+
+A more recent development has been the use of pseudo-Boolean models. Like SAT, all variables are Boolean, but instead of clausal constrainsts pseudo-Boolean models allow linear inequalities over these variables. The Glasgow CP solver @gocht2022auditable @gocht2022certifying encodes CP constraints in pseudo-Boolean form and uses a cutting planes proof system. They use an external verifier, VeriPB, to verify the proofs. 
+
+VeriPB is also used in the work by Flippo et al. @flippo2024proof, which introduced an initial version of the proof format used in this work, which we discuss in detail in @sec:proofsystem. VeriPB can also be used in SAT and has participated in the SAT Competition @bogaerts2023satcompveripb, not in the MiniZinc challenge or XCSP competition, as these have no special rules or requirements for proof logging and/or certification.
+
+Furthermore, VeriPB also has a formally verified back-end, known as CakePB @gocht2024subgraphvercakepb. They have also shown it to be possible to formally verify the encoding step. This means they can achieve a very high level of trust.
+
+
+#pagebreak()
+
+= Approach <sec:approach>
+
+Our main goal is to determine how to develop formally verified checkers for individual proof steps, where the proof steps are as described in @sec:proofsystem. We repeat the different proof steps here and discuss our approach for each one, highlighting the expected difficulties.
+
+*Propagator inference step*: For each possible type of reasoning (propagator + constraint combination), it is necessary to implement a checker of signature `check_inference(fact: Fact, constraint: Constraint) -> bool` and prove that it is sound. 
+
+Since there are many constraints and propagators, we cannot hope to implement them all. Instead, we focus on implementing two important ones to serve as an example, using them as inspiration for the development of a general methodology for developing new propagator inference checkers. 
+
+To ensure an inference checker faithfully checks a particular propagator, the checker should successfully verify every valid propagation $D -> q$ by that propagator. Rewriting propagations as $D and not q -> bot$ and determining under what conditions conflicts occur is expected to make this easier. 
+
+Furthermore, as each checker only receives a fact as input, we want some procedure to convert it into a domain structure that provides more information.
+
+*Deduction step*: The main difficulty with checking a deduction step, as we see in @proc:deduct (deduction check), comes from tracking the domains, updating them, checking whether they satisfy atomic constraints and, checking if there is a variable with an empty domain. Furthermore, as the deduction steps do not depend on any constraint-specific reasoning, there is only a single thing to implement and formally verify. Therefore, a general methodology is not required.
+
+*Other steps*: The initial domain inference step and nogood inference step are not part of our contribution, but rather part of the CP proof checker project @sidorov2025checker.
+
+*Building blocks:* Furthermore, we notice that both the propagator inference step and the deduction step require reasoning about domains: in particular, they require going back and forth between a richer, more efficient domain representation and atomic constraints. We therefore seek to develop building blocks that can be used both in the deduction checker and in inference checkers. 
+
+*Implementation*: Finally, we expect difficulty with the implementation, as we will have to express the checker algorithms in the programming language of the Rocq prover, which is a functional language. Furthermore, our informal notions might not always translate well to rigorous formal statements.
+
+The remaining sections describe our contributions, where each separate contribution is a top-level section. 
+
+#pagebreak(weak: true)
+
+= Inference checker methodology <sec:methodology>
+
+The first major contribution we present is a methodology for developing propagator inference checkers. We immediately specify that this methodology is useful only for propagators that do more than a simple conflict check or for which not much is yet known about the necessary conditions of conflicts. 
+
+Before describing the general methodology, we summarize its use for developing a checker for the timetable propagator for the cumulative constraint. This should give an intuitive idea of its usefulness and the various steps. The dedicated section on this checker (@check:cumul) describes this in more detail and also contains proofs. 
+
+#example(title: [Methodology application to cumulative])[
+  Consider the cumulative timetable propagation algorithm (@proc:timetable). Let $c$ be a cumulative constraint with activities $A$. 
+  + First, we notice that the algorithm has an explicit conflict check in step 3 (resource profile check). It reports the fact $D -> bot$, where $D$ is simply the domain of all activities. We have identified our first _conflict type_, as the reported fact already has an empty consequence. This conflict occurs if there exists a time $t$ where the resource profile already overloads the constraint's capacity. We will also name this conflict, terming it a _time conflict_.
+  + Next, we see that the timetable algorithm has two types of propagation. If it determines that a task $x$ whose start time has $L$ as a lower bound cannot start for all times $L <= t < L'$, then it propagates $x >= L'$. The second type is analogous, but then for a start time with upper bound $U$ it determines that the task cannot start at $U' < t <= U'$. Hence, it propagates $x <= U'$. If we then consider the situation where we negate the consequent, we see that the two types of propagation actually have the same conflict condition. In the case of the increased lower bound, negating the consequent means that $L <= x < L'$, but at these times, we saw that it cannot start. Hence, there is a conflict. We see the same for the upper bound case. This means we have identified a second conflict type, which we term an _activity conflict_. This conflict occurs if an activity cannot be scheduled anywhere within its bounds. Note that the timetable algorithm also reports a conflict in this situation.
+  + We must now build a formally verified algorithm for each conflict type. We will not go into details on how to do this for cumulative here, see @check:cumul.
+  + Then, notice that for the two propagation types, the variable that is in the consequent refers to exactly the activity that will have an activity conflict. Hence, we can use the variable in the consequent to guide our algorithm to consider that activity first.
+  + We can now combine the different conflict checks and our use of the consequent as a hint into a checking algorithm that will verify any timetable propagation.
+] <ex:infmethod:cum>
+
+Now that we have seen an example, we can introduce the general methodology, which has exactly the same steps as above. Consider a propagator $p$ for a constraint of type $cal(T)$. We propose the following methodology for developing an inference checker that can verify every fact describing a propagation by $p$. This builds on @proc:verifystrat (strategy for verifying propagators) and the proof system used in this work (@sec:proofsystem).
+
+#procedure(title: [Methodology for inference checker development])[
+  1. (*Identify propagator conflict checks*) Many propagators have conflict checks. For each conflict check, describe the conditions when such a conflict check would find a conflict. This gives a list of _conflict types_. _Example: in cumulative timetable, at each time point it is checked whether mandatory activities exceed the capacity._
+  2. (*Propagation conflict types*) Exhaustively describe the different types of propagation that can occur. For each such type of propagation, determine the exact (domain) conditions under which the propagator will perform such a propagation. _Example: in cumulative timetable a lower bound for a task's starting time that is initially $L$ can be increased to some value $L'$ if scheduling that task at any time from $L$ to $L' - 1$ would cause the capacity to be exceeded._ Suppose we call this domain condition $D$ and the propagated constraint $q$. Then $D and not q$ is another conflict type. This further expands the list of conflict types.
+  3. (*Conflict checkers*) For each of the conflict types identified in steps 1 and 2, build a formally verified algorithm that is able to identify that particular conflict. If no additional information is available, this algorithm is not necessarily of significantly lower implementation complexity than the propagation algorithm itself. However, the propagated atomic constraint is by definition tighter than the original bound. Therefore, this domain will always be more restricted than the domain a propagator would have to deal with. In many cases, this can reduce the number of considered cases, allowing a simpler, but less efficient, algorithm to be used.
+  4. (*Consequent hint*) Optionally, the information that a particular variable was restricted to a particular bound can be used by the verification algorithm. This can further restrict the number of considered cases, as potentially only that particular variable must be checked. _Example: in cumulative timetable we know that if a particular activity was propagated, we need only inspect if we cannot schedule that activity on its domain._
+  5. (*Infer domain and combine*) Combine the different conflict checkers into a single checker for the fact. Then, given a fact, convert it into a domain (where for a fact $A -> q$ we use the domain $A and not q$) and feed it to the checker.
+] <proc:methodinf>
+
+We have successfully applied @proc:methodinf to the cumulative constraint. We now discuss our notion of _conflict types_ in some more detail. This is followed by a discussion of the conditions necessary for applying this methodology to a constraint.
+
+// manual
+\
+\
+
+== Conflict types <sec:infmethod:conflicttypes>
+
+For a particular propagator $p$ for constraints of type $cal(T)$, a _conflict type_ is a conflict characterized by a particular domain condition: if the domain condition is satisfied, the constraint becomes unsatisfiable. 
+
+In the case of cumulative, we saw two different types: _time conflicts_ and _activity conflicts_. If a propagator performs a conflict check, the conditions it checks for are exactly the domain conditions of a conflict type. Furthermore, for every propagation $D -> q$, the domain condition $D$ combined with the condition $not q$ is the domain condition of a conflict type. 
+
+It is possible for multiple types of propagations to degenerate to the same conflict type when the negated consequent is added. We saw this case for cumulative: when propagating, one must separately propagate the lower and upper bounds, but the propagations actually have the same conflict type (the activity conflict).
+
+== Usage conditions
+
+Not all checkers for constraints and propagators can be more easily developed using this methodology. In particular, for another constraint we studied in detail and developed a checker for, alldifferent, there exists a powerful theorem for alldifferent that directly provides a necessary condition for the unsatisfiability of an alldifferent constraint (@thm:hall). Furthermore, this condition is easy to check. This means that we do not have to investigate the propagation algorithm in order to discover the different conflict types, as there is only one (an alldifferent conflict).
+
+As part of the CP proof checker project, a linear inequality checker has also been developed. When we try to apply our methodology to this checker, we see a similar problem as with alldifferent: there is only one conflict type, namely when the minimum value (based on bounds reasoning) of the left-hand side of the checker exceeds the constant on the right-hand side. Therefore, the methodology cannot really be applied; there are not enough steps in the propagation algorithm to apply it to.
+
+We now summarize these two cases as general cases in which this methodology is not as useful as it is for constraints such as cumulative.
+
+- If there exists a sufficient condition for the unsatisfiability of a constraint and this condition is easy to check, a checker can simply implement a check for this condition and be done.
+- If there is only one conflict type that is already captured by a conflict check in the propagation algorithm, then the checker can simply implement the conflict check and be done.
+
+
+#pagebreak(weak: true)
+
+= Perforated intervals <sec:perfint>
+
+
+#let dom = spro[dom]
+
+#let holes = spro[holes]
+
+As discussed in the approach (@sec:approach), both the deduction step and the inference checkers need some machinery to reason about variable domains and atomic constraints. We present here the theory and formally verified implementation of a particular integer domain representation that fulfills the following specific requirements:
+- Deduction requires efficiently checking whether atomic constraints hold and whether a group of atomic constraints implies an empty domain.
+- Our timetable cumulative checker requires the extraction of lower and upper bounds from a list of atomic constraints (which, when considering not-equals constraints, might be different from just the maximum upper bound, minimum lower bound).
+- Our alldifferent checker requires building an enumerated domain from a list of atomic constraints.
+
+We call the domain representation introduced here _perforated intervals_. A perforated interval consists of three pieces of data: lower and upper bounds as well as a set of holes (or perforations). The name was chosen to be distinct from punctured intervals used in e.g., analysis, which are usually missing exactly one value, while our perforated intervals can have many holes.
+
+In this section, we begin with the formal definition and discuss some related concepts, including the introduction of the concept of a perforated interval being _tight_. When a perofrated interval is tight, we can perform the efficient checks necessary for fact deduction and we can easily check whether the domain is empty. We then discuss these checks and their implementation (together with their correctness specification) in @sec:perfint:checks. This is followed by a discussion in @sec:perfint:updates on how we can build these domains by updating them based on atomic constraints. Then, the algorithm for how to actually tighten a domain is described in @sec:perfint:tightening, followed by proofs that this algorithm actually results in a tight domain. We conclude with a discussion of some implementation considerations in @sec:perfint:impl.
+
+#let domlink(name) = codelink("Domain", name)
+
+#definition(title: [Perforated interval, #domlink("Domain")])[
+  A _perforated interval_ is a triple $(dlb, dub, holes)$, where $dlb, dub in Zext$ (#codelink("Zext", "Zext")) and $holes$ is a finite subset of $ZZ$. 
+]
+
+We note that in our formalization, these perforated intervals are referred to simply as domains, as that is currently the only type of domain representation in the checker.
+A perforated interval can also be interpreted as the set difference of two sets, $[dlb, dub] - holes$, where the interval must satisfy $[dlb, dub] subset.eq ZZ$. Since perforated intervals represent domains, we define when an element is in a perforated interval.
+
+#definition(title: [Elements, #domlink("is_in_dom")])[
+  Let $n in ZZ$ and $dom = (dlb, dub, holes)$ a perforated interval, then $n in dom$ iff $dlb <= n <= dub$ and $n in.not holes$.
+]
+
+This induces a natural equivalence between perforated intervals. 
+
+#let domeqv = $tilde.eq$
+
+#definition(title: [Domain equivalence, #domlink("dom_equiv")])[
+  Let $dom$ and $dom'$ be two perforated intervals. Then they are _equivalent_, written $dom domeqv dom'$, iff forall $n$, $n in dom <-> n in dom'$.
+]
+
+There exist examples of perforated intervals that are equivalent, but not equal. We will often say these have the same _logical domain_.
+
+#example(title: [Unequal but equivalent])[
+  Let $dom = (5, +infinity, {5, 6})$ and $dom' = (7, +infinity, {})$. Then $dom domeqv dom'$. Let $dom_"empty" = (4, 6, {4, 5, 6})$ and $dom'_"empty" = (10, 5, {})$. Then also $dom_"empty" domeqv dom'_"empty"$.
+] <ex:domeqv>
+
+It is important to be able to determine whether an atomic constraint holds for all elements of a domain (i.e., when a domain satisfies the constraint, see @def:atomic and @def:constraint), since then we can check whether the premises of a fact hold. Furthermore, it should be easy to determine when a domain is inconsistent, which is necessary in the deduction step. 
+
+Not every perforated interval can be easily checked for these conditions. For example, verifying whether $dom_"empty"$ from @ex:domeqv is inconsistent requires looking at the holes and seeing that every element in the interval is in the set of holes. However, $dom'_"empty"$, checking its bounds immediately leads to the conclusion that it is empty. Similarly, to see whether $x >=6$ holds for $dom$ (again, from @ex:domeqv) requires inspecting the holes, while for $dom'$ comparing 6 with the lower bound suffices. We now state the exact condition for such checks to require only inspecting the bounds.
+
+#definition(title: [Tightness, #domlink("dom_tightened")])[
+ Let $dom = (dlb, dub, holes)$ be a perforated interval. Then $dom$ is called _tight_ if $dlb, dub in.not holes$.
+]
+
+In the next subsection, these checks are discussed in detail.
+
+== Checks <sec:perfint:checks>
+
+We want our domain to support efficiently answering the following two questions:
+1. (Check atomic holds) Is a particular atomic constraint true for every value in the domain? (@def:atomic_holds)
+2. (Check domain consistency) Is the domain non-empty? (@def:domconsistent)
+
+Let us describe these properties formally.
+
+#definition(title: [Domain consistency, #domlink("dom_consistent")])[
+  A domain $dom$ is _consistent_ (or _non-empty_), if there exists $n in ZZ$ such that $n in dom$.
+] <def:domconsistent>
+
+In the remainder of this section, we will make use of _unbound atomic constraints_. We call them _unbound_ because (as opposed to @def:atomic), they do not refer to any variable. Instead, they are a constraint on some number, without any reference to the concept of a variable. We will use the notation $[diamond.small c]$, where $c in ZZ$ and $diamond.small in {<=, >=, !=, =}$), to refer to them. We will also frequently omit "unbound" when this does not lead to confusion. Note also that an atomic constraint (as in @def:atomic) can be seen as a pair consisting of an unbound atomic constraint and a variable identifier.
+
+#definition(title: [Atomic holds, #specpflink("atomic_holds")])[
+  Let $a = [diamond.small c]$ be an atomic constraint. Then $a$ _holds_ for a domain $dom$ if for all elements $n in dom$, we can say $n diamond.small c$.
+] <def:atomic_holds>
+
+Note that if $dom$ is the domain of some variable $x$, @def:atomic_holds is equivalent to $dom$ satisfying the atomic constraint $[x diamond.small c]$ (@def:atomic and @def:constraint).
+
+We describe a procedure for checking each of the two properties specifically for perforated intervals. The first _check function_ -- @fun:check_consistency[l] -- first checks whether the lower bound is positive infinity or the upper bound is negative infinity (returning `false` in both cases) and then checks whether the lower bound is less than or equal to the upper bound. If so, it returns `true`.
+
+We describe this now using pseudocode. The syntax used and the precise definitions of e.g. `PerforatedInterval` are discussed in @appendix:pseudocode. 
+
+#funlink(<pseudo:check_consistency>, "check_consistency")
+#pseudocode(title: [Domain consistency check, #domlink("dom_check_consistent")])[
+```tiplang2
+Definition check_consistency(dom: PerforatedInterval) -> bool:
+  match (lb(dom), ub(dom)):
+    case (positive_infinity, _):
+      return false
+    case (_, negative_infinity):
+      return false
+    case (_, _):
+      return lb(dom) <= ub(dom)
+```
+] <pseudo:check_consistency>
+
+
+The next _check function_ -- @fun:check_holds[l] -- has different behavior for each atomic constraint.
+- For $[<= c]$ constraints, it returns whether the upper bound is less than or equal to $c$. 
+- For $[>= c]$ constraints, it returns whether the lower bound is greater than or equal to $c$
+- For $[= c]$ constraints, it checks whether the lower and upper bounds are equal to $c$
+- For $[!= c]$, it checks whether $c$ is strictly greater than the upper bound, $c$ is strictly smaller than the lower bound, or if $c in holes$.
+
+@fun:check_holds makes use of @fund:is_element_of[l].
+
+#funlink(<pseudo:check_holds>, "check_holds")
+#pseudocode(title: [Check if atomic holds for domain, #domlink("check_holds")])[```tiplang2
+Definition check_holds(dom: PerforatedInterval, atom: Atomic) -> bool:
+  match comparator(atom):
+    case less_equal:
+      return ub(dom) <=? constant(atom)
+    case greater_equal:
+      return constant(atom) <=? lb(dom)
+    case equal:
+      return (ub(dom) <=? constant(atom)) && (constant(atom) <=? lb(dom))
+    case not_equal:
+      if ub(dom) <? constant(atom):
+        return true
+      else if constant(atom) <? lb(dom):
+        return true
+      else:
+        return is_element_of(constant(atom), holes(dom))
+```] <pseudo:check_holds>
+
+
+
+Our claim is now that when a perforated interval is tight, the check functions decide the properties (with an additional requirement on @fun:check_holds for the perforated interval to be consistent). In order to use the check functions correctly, an implementation would have to ensure the domains are tight before giving them to those functions. This gives the following two lemmas, which also serve as the correctness specifications of the check functions.
+
+#lemma(title: [`check_consistency` decides consistency if tight, #domlink("dom_consistent_iff_checked")])[
+  Let $dom$ be a tight, perforated interval. Then $dom$ is consistent if and only if @fun:check_consistency$(dom) = $ `true`.
+] <lem:check_consistenty_decides>
+
+The proof has been formalized, but we omit it here, as most cases can be dealt with simply by case splitting and do not depend on the perforated interval being tight. Instead, we highlight one specific case to illustrate why the perforated interval must be tight. When $dub$ is some number $U in ZZ$ and $dlb = - infinity$, notice that $dub in dom$ (and therefore it is consistent), since the perforated interval is tight we have that $dub in.not holes$.
+
+
+#lemma(title: [`check_holds` decides atomic holding if tight, consistent])[
+  Let $dom$ be a tight and consistent perforated interval and $a$ an atomic constraint. Then $a$ holds for $dom$ if and only if @fun:check_holds$(dom, a) =$ `true`.
+] <lem:check_holds_decides>
+
+The reason we require consistency is that for an inconsistent and tight perforated interval, @fun:check_holds might not return `true`, even though our definition for an atomic holding would be trivially true (as the perforated interval is then empty). *Note*: we have _not_ formalized the forward direction of this proof for all cases, which is not needed for soundness. However, we have done it for the lower bound, #domlink("tightened_then_checks_lb"). The other cases should follow similarly. We briefly discuss two cases.
+- When proving the forward implication for an atomic $a = [>= c]$ and we have that $dlb = -infinity$ and $dub$ is some number $U in ZZ$, @fun:check_holds equals `true` if $c <= - infinity$. This can never be the case, so we must derive a contradiction. Since we assume $a$ holds, then the value $min({U,c,min(holes union 0)}) - 1$ has to be greater or equal to $c$ as it is in the perforated interval (since smaller than all holes and smaller than $U$). But by its definition, it is strictly less than $c$. Hence, there is a contradiction. _For the upper bound case, we have not formally proven the forward implication due to time constraints._
+- When proving that when a not equals constraint holds @fun:check_holds equals `true`, we look at the two possible outcomes of the triple or statement. In the non-trivial case, this then gives that $dlb <= c <= dub$ and $c in.not holes$. But that gives exactly that $c in dom$. But then the atomic constraint applies to $c$, so $c != c$, which is a contradiction.
+
+Now that we know how to check consistency and whether an atomic constraint holds for a perforated interval, we will discuss in the next subsection how to actually build them, which is done by iteratively updating an initial domain representing all of $ZZ$.
+
+== Updates <sec:perfint:updates>
+
+For each type of atomic, a perforated interval can be updated such that the atomic holds for the perforated interval. This can, for example, be used to track the domains of variables during deduction step checking (@sec:deduct) or to extract lower and upper bounds from a fact (see @sec:res:infcheck for details). The four possible updates are as follows, which are collected in the function @fun:apply_atomic[l]:
+
+- For $[<= c]$ atomics, update the upper bound by taking the maximum of the current upper bound and $c$ (using the operations on $Zext$ defined in @sec:zext).
+- For $[>= c]$ atomics, update the lower bound by taking the minimum of the current upper bound and $c$ (using the operation on $Zext$ defined in @sec:zext).
+- For $[= c]$ atomics, update both the upper bound and lower bounds just as for inequality atomics.
+- For $[!= c]$ atomics, add $c$ to the holes.
+
+#funlink(<pseudo:apply_atomic>, "apply_atomic")
+#pseudocode(title: [Update domain so that atomic holds, #domlink("apply_atomic")])[```tiplang2
+Definition apply_atomic(dom: PerforatedInterval, atom: Atomic) -> PerforatedInterval:
+  match comparator(atom):
+    case less_equal:
+      new_ub := max(ub(dom), constant(atom))
+      return PerforatedInterval(lb(dom), new_ub, holes(dom))
+    case greater_equal:
+      new_lb := min(lb(dom), constant(dom))
+      return PerforatedInterval(new_lb, ub(dom), holes(dom))
+    case equal:
+      new_ub := max(ub(dom), constant(atom))
+      new_lb := min(lb(dom), constant(dom))
+      return PerforatedInterval(new_lb, new_ub, holes(dom))
+    case not_equal:
+      new_holes := add_to(constant(atom), holes(dom)
+      return PerforatedInterval(lb(dom), ub(dom), new_holes)
+```] <pseudo:apply_atomic>
+
+We now state useful specificaiton lemma for @fun:apply_atomic: it says that any integer is an element of a perforated interval that had an atomic applied if and only if that integer was an element of the original domain and it obeys the atomic constraint.
+
+#let atomic = spro[atomic]
+
+#lemma(title: [@fun:apply_atomic specification, #domlink("apply_atomic_spec")])[
+  Let $n in ZZ$, #dom a perforated interval, and $[diamond.small c]$ an atomic constraint, then $n in #jmono[apply_atomic]\(dom, [diamond.small c]) <-> n in dom and n diamond.small c$.
+] <lem:apply_atomic_spec>
+
+We omit its proof, which can be done by examining the cases for $dlb$ and $dub$ and using the defined order on $Zext$.
+
+#let atomics = spro[atomics]
+
+We also define a function that applies multiple atomic constraints to a domain, @fun:apply_atomics[l].
+
+#funlink(<desc:apply_atomics>, "apply_atomics")
+#fundesc(title: [(#domlink("apply_atomics")) Given a domain #dom and a list of atomics #atomics, successively updates the domain for each atomic in #atomics using @fun:apply_atomic.])[```tiplang2
+Definition apply_atomics(dom: PerforatedInterval, atoms: List[Atomic]) -> PerforatedInterval:
+```
+] <desc:apply_atomics>
+
+Using a straightforward induction proof, we can generalize @lem:apply_atomic_spec for @fun:apply_atomics as follows:
+
+#lemma(title: [@fun:apply_atomics specification, #domlink("dom_effect_atomics")])[
+  Let $n in ZZ$, #dom a perforated interval and #atomics a list of atomic constraints, then $n in #jmono[apply_atomics]\(dom, atomics) <-> n in dom and (forall [diamond.small c] in atomics, n diamond.small c$).
+]
+
+Armed with this lemma, we see that applying the order of atomic constraints has no effect on which logical domain is implied by them, because the right hand side it states that for all atomics in #atomics, we have that domain elements must satisfy them, irrespective of the order of #atomics. This is a powerful tool for when we want to manage applying multiple atomic constraints. 
+
+In @sec:perfint:checks, we described the check functions for perforated intervals. They work correctly only when given tight domains. How to achieve tightness is described in the next section.
+
+== Tightening procedure <sec:perfint:tightening>
+
+In this section, only the case for tightening the lower bound is described. The upper bound case is fully symmetric. In our formal proofs, we have tried to use this symmetry to avoid duplicate proofs as much as possible. We describe this technique at the end of this section.
+
+The tightening procedure is simple. Given a list of holes in strictly increasing order (so in particular it also has no duplicates) and an initial lower bound, we can tighten the lower bound by first iterating until we find a hole equal to the current lower bound. The current bound is then increased by one. We then keep iterating until the next hole is not equal to the current bound (which happens when the list of holes skips at least one integer). We illustrate this with a simple example.
+
+#example(title: "Tightening")[
+  Suppose we have a variable $x$ that we know is greater than or equal to $5$. Given a list of holes (values that we know $x$ cannot take) of [3, 5, 6, 7, 9], we first iterate until we reach 5, so then we are left with [5, 6, 7, 9]. Then the bound is updated to 6, to 7, and to 8 as we iterate. However, since there is no hole at 8, we stop. Therefore, our lower bound is updated to 8.
+]
+
+We give pseudocode for the two functions used in the implementation of the tightening procedure. First, we define @fun:tighten_lb_with_holes[l], which is defined using "Recursive", indicating it is a recursive function. This function computes the tightened lower bound only. The second match case is the case where the list is non-empty, after which the head of the list is assigned to the variable `h` and the remaining elements to `holes'`. 
+
+#funlink(<pseudo:tighten_lb_with_holes>, "tighten_lb_with_holes")
+#pseudocode(title: [Tighten lower bound given holes, #domlink("tighten_with_holes")])[```tiplang2
+Recursive tighten_lb_with_holes(holes: List[Z], lb: Z) -> Z:
+  match holes:
+    case nil:
+      return lb
+    case h :: holes':
+      if h =? lb:
+        return tighten_lb_with_holes(holes', lb + 1)
+      else:
+        return lb
+```] <pseudo:tighten_lb_with_holes>
+
+We then define @fun:tighten_lb[l], which operates on a full domain instead. Furthermore, it ensures that redundant holes (holes smaller than the lower bound) are removed using @fund:filter_greater_eq[l], as otherwise @fun:tighten_lb_with_holes would not perform any tightening. Note that we first check if we need to do any tightening at all. Furthermore, we do not update the holes during tightening, as removal is not cheap, and we would potentially have to remove many elements after tightening the bounds.
+
+#funlink(<pseudo:tighten_lb>, "tighten_lb")
+#pseudocode(title: [Tighten domain lower bound, #domlink("tighten_lb")])[```tiplang2
+Definition tighten_lb(dom: PerforatedInterval) -> PerforatedInterval:
+  match lb(dom):
+    case lb_value:
+      if is_element_of(lb_value, holes(dom)):
+        holes_from_lb := filter_greater_eq(holes(dom), lb_value)
+        updated_lb := tighten_lb_with_holes(holes_from_lb, lb_value)
+        return PerforatedInterval(updated_lb, ub(dom), holes(dom))
+      else:
+        return dom
+    case _:
+      return dom
+```] <pseudo:tighten_lb>
+
+
+
+#let tightenlbholes = [@fun:tighten_lb_with_holes]
+#let tightenlb = [@fun:tighten_lb]
+#let filterge = [@fund:filter_greater_eq]
+
+We are interested in proving two facts: *1) (tighten equivalency)* tightening the bounds produces a new domain that is equivalent to the previous one, i.e., tightening does not change the elements that can be in the domain. This is useful when we care only that the bounds produced in the domain procedures are actually valid for the variable we are looking at, not if they are as good as they could be. _Critically, this is actually all that is needed to prove the soundness of the checker._ *2) (tightening tightens)* after applying the tightening procedure (not just on the lower bound, but also the upper bound), our domain is tight. If that holds, we can apply what we learned earlier about tight domains. We begin with the fact that tightening creates a new equivalent domain. As before, we only write down the case for tightening the lower bound. 
+
+=== Tighten equivalency
+
+We first need a number of intermediary lemmas that relate to #tightenlbholes. The first one says that if a value obeys some bound and is not a hole, that value will still obey the tightened bound. To see why (in the case of a lower bound), tightening always terminates when we reach a value not in the holes. Since it is a valid lower bound, it was originally below the value. But since the value is not in the hole, it can never increase beyond the value.
+
+#lemma(title: [Soudness of #tightenlbholes, #domlink("tighten_with_holes_sound")])[
+ Let $holes$ be a list of integers and $y in ZZ$ s.t. $y in.not holes$. Furthermore, let $dlb in ZZ$ s.t. $dlb <= y$. Then, $tightenlbholes(holes, dlb) <= y$.
+] <lem:tighten_with_holes_sound>
+#proof[
+  We prove this by induction over $holes$. First, in the case when $holes$ is empty, we immediately return the bound unchanged. But since one of our assumptions is that $dlb <= y$, if it remains unchanged, then still $tightenlbholes(holes, dlb) <= y$. Now consider the inductive case, where we have $y in.not (h "::" holes')$ and $dlb <= y$. We then have to show that $tightenlbholes((h :: holes'), dlb) <= y$. Consider that if $h != dlb$, the bound remains unchanged. Therefore, we can again use our assumption that $dlb <= y$. In the other case, we must show, after simplifying, that $tightenlbholes(holes', h + 1) <= y$. First, note that $y in.not (h "::" holes')$ indicates $y != h$ and $y in.not holes'$. Furthermore, as we did induction over general $dlb$, our induction hypothesis states that $forall b, y in.not holes' and b <= y -> tightenlbholes(holes', b) <= y$. Therefore, we can apply our induction hypothesis with $b = dlb + 1$. We already had that $y in.not holes'$, so all that remains is to show that $dlb + 1 <= y$. Since $dlb <= y$, it is enough to show $y != dlb$. But we already have $y != h$, and in the case we are considering $h = dlb$.
+] 
+
+Next, we have that tightening can only ever increase (so it is also monotonic). 
+
+#lemma(title: [Monotonicity of #tightenlbholes, #domlink("tighten_holes_monotonic")])[
+  Let $holes$ be a list of integers and $dlb in ZZ$. Then $dlb <= tightenlbholes(holes, dlb)$.
+] <lem:tighten_holes_monotonic>
+#proof[
+  We again use induction over $holes$. For empty $holes$, $tightenlbholes\(holes,$ $dlb) = dlb$, so in that case we are done. In the inductive case, we must show $dlb <= tightenlbholes((h "::" holes'), dlb)$. Consider first the case where $h = dlb$. Then we have to show $dlb <= tightenlbholes(holes', dlb+1)$. Then we can use our induction hypothesis (which, since we were general in $dlb$, states $forall b, b <= tightenlbholes(holes', b)$) to find that $dlb + 1 <= tightenlbholes(holes', dlb+1)$, so certainly $dlb$ is also less than or equal. In the case where $h != dlb$, we just have to show $dlb <= dlb$ by the definition of $tightenlbholes$, so we are done immediately.
+] 
+
+Then, we prove the equivalence of having a bound and a hole and having a tight bound and a hole.
+
+#lemma(title: [Tightened bound equivalency, #domlink("tighten_holes_equiv")])[
+  Let $holes$ be a list of integers and $dlb, y in ZZ$. Then the following are equivalent:
+  1. $dlb <= y$ and $y in.not holes$
+  2. $tightenlbholes(filterge(holes, dlb), dlb) <= y$ and $y in.not holes$
+] <def:tighten_holes_equiv>
+#proof[
+  Let $holes, dlb, y$ be as in the assumptions.
+  
+  $1 => 2$: Clearly we have $y in.not holes$. Then we apply @lem:tighten_with_holes_sound ($tightenlbholes$ soundness), after which it remains to be shown that $dlb <= y$ and $y in.not filterge(holes, dlb)$. The first is part of our assumptions. To see why $y in.not filterge(holes, dlb)$, consider that $filterge(holes, dlb)$ is a subset of $holes$, so since $y in.not holes$, certainly it is not in the subset.
+  
+  $2 => 1$: Again, $y in.not holes$ is immediate from our assumptions. Then, since $dlb <= tightenlbholes\($$filterge\(holes,$$ dlb), dlb)$ by the monotonicity of tightening (@lem:tighten_holes_monotonic), and because we have $tightenlbholes\($$filterge(holes, dlb),$$ dlb) <= y$ by assumption, we have $dlb <= y$ as required.
+] 
+
+#let tightenfilter = [$tightenlbholes\($$filterge(holes, dlb))$]
+
+#lemma(title: [`tighten_lb` preserves logical domain, #domlink("tighten_lb_equiv")])[
+ Let #dom a perforated interval. Then $tightenlb(dom) domeqv dom$. 
+]
+#proof[
+  Let $n in ZZ$ and $dom = (dlb, dub, holes)$. We must show that $n in dom <-> n in tightenlb(dom)$.
+  First, suppose $dlb in {infinity, -infinity}$. Then we see that $tightenlb$ does not modify the domain. Therefore, we look only at the case where $dlb in ZZ$. Next, consider the case where $dlb in.not holes$. Again, the domain remains unchanged, so we may now assume $dlb in holes$. We have that $tightenlb(dom) = $$(tightenfilter,$ $ dub,$ $ holes)$, so all that remains to be shown is that $dlb <= n <-> tightenfilter <= n$. For this, we can apply @def:tighten_holes_equiv (tightened bound equivalency), since for both the $=>$ and $arrow.l.double$ we also have that $n in.not holes$. 
+]
+
+=== Tightening tightens
+
+#let pseudoheading(body) = {
+  set par(justify: false, first-line-indent: 0em)
+  body
+}
+
+Now that we have seen that our implementation of tightening creates an equivalent domain, we want to show that this actually creates a domain that is tight. This is not trivial to prove and relies on the $holes$ being sorted. In our implementation, the $holes$ set is implemented using a tree data structure, allowing efficient iteration in sorted order. We again state only the case for lower bounds. We first state and prove a lemma about the exact behavior of $tightenlbholes$. This is almost exactly what we want, but here we expect $holes$ to not contain any "redundant" holes. In our practical implementation, this is ensured by $filterge$.
+
+#lemma(title: [Tighten holes specification, #domlink("tighten_holes_spec")])[
+  Let $holes$ be a list of strictly increasing integers and let $dlb in ZZ$. Then, if we have that for each $h in holes, dlb <= h$, this implies @fun:tighten_lb_with_holes$(holes, dlb) in.not holes$.
+] <lem:tighten_holes_spec>
+#proof[
+  We proceed using induction over $holes$, not yet choosing a particular $dlb$. Then in the case that $holes$ is empty, clearly any value cannot be an element of it so also @fun:tighten_lb_with_holes$(holes, dlb) in.not holes$, for any $dlb$.
+
+  Next, consider the case where $holes = h :: holes'$. Let $dlb in ZZ$ be s.t. for any $h' in h :: holes'$, $dlb <= h'$. Furthermore, let $h :: holes'$ be strictly increasing. Our goal is then to show that $tightenlbholes(h :: holes', dlb) in.not h :: holes'$.
+
+  We consider two cases. First when $h = dlb$. 
+
+  #pseudoheading[*Case 1. $h = dlb$*]
+  
+  Our goal then simplifies to showing that $tightenlbholes(holes', h + 1) in.not h :: holes'$. This is equivalent to showing that $tightenlbholes(holes', h + 1) = h or tightenlbholes(holes', h + 1) in holes'$ leads to a contradiction. Note that by the monotonicity of #tightenlbholes (@lem:tighten_holes_monotonic), $h + 1 <= tightenlbholes(holes', h + 1)$. But then we have that $h + 1 <= h$ if $tightenlbholes(holes', h + 1) = h$, a contradiction in that case.
+
+  We will now use the induction hypothesis to show that $tightenlbholes(holes', h + 1) in.not holes'$, which contradicts the other case. The induction hypothesis is for $holes'$, but is general over $dlb$. If we choose $dlb = h + 1$, it indeed implies what we want. To appply it, we must show that $holes'$ is strictly increasing and that for all $h' in holes'$, $h + 1 <= h'$. Clearly $holes'$ is strictly increasing, since $h :: holes'$ is. Furthermore, all elements in $holes'$ must be strictly greater than $h$ since $h :: holes'$ is strictly increasing. So for any $h' in holes$, $h < h'$. But then $h + 1 <= h'$ as required.
+
+  #pseudoheading[*Case 2. $h != dlb$*]
+
+  In this case, our goal simplifies to showing $dlb in.not h :: holes'$. This is equivalen to deriving a contradiction when $h = dlb or dlb in holes'$. Clearly, we cannot have $h = dlb$. In the other case, since $dlb in holes'$, we have that $h < dlb$ by the fact that $h :: holes'$ is strictly increasing. But one of our assumptions is that for all $h' in h :: holes', dlb <= h'$. Since $h in h :: holes'$, also $dlb <= h$. But we cannot have that both $h < dlb$ and $dlb <= h$.
+]
+
+#lemma(title: [Tightened lower bound is not in holes, #domlink("tighten_lb_tightens")])[
+  Let $dom$ be a perforated interval. Then, $dlb\($@fun:tighten_lb$\(dom))$ $in.not$ $ holes\($@fun:tighten_lb$(dom))$.
+]
+#proof[
+  First, observe that $tightenlb$ does not change the holes, so let $holes$ be the holes of $dom$. Furthermore, if $dlb(dom)$ is not finite or is already not an element of $holes$, we are also done. In the other case, we have that $dlb(tightenlb(dom)) = tightenfilter$. Let us abbreviate this value by $dlb'$. Therefore, we must show that $dlb' in.not holes$. First, we see that $dlb <= dlb'$ by the monotonicity of $tightenlbholes$. We will now determine that $dlb' in.not holes$ by showing that $dlb' in holes$ implies a contradiction. Since $dlb' in holes$ and also $dlb <= dlb'$, we know that $dlb' in filterge(holes, dlb)$. This is because $holes$ is sorted in strictly increasing order (by our implementation of the perforated interval), so since $filterge$ returns the part of the list to the right of $dlb$, we know the returned elements are exactly those elements in the original list greater than or equal to $dlb$. It is enough to show that $dlb' in.not filterge(holes, dlb)$, as that implies a contradiction. We can now apply @lem:tighten_holes_spec (tighten holes spec) with $holes = filterge(holes, dlb)$, which, if we substitute the meaning for $dlb'$, finishes the proof.
+]
+
+We have seen how we can check whether a perforated interval is empty and whether an atomic constraint holds for it, how we can update it, and how we can tighten it. We also saw that when a perforated interval is tight, the efficient checks we implement actually decide the properties we seek to check. We now conclude our discussion of perforated intervals with a discussion of some considerations that matter for the actual implementation and formalization.
+
+== Implementation considerations <sec:perfint:impl>
+
+=== #Zext
+
+We implement #Zext exactly with the properties as described in @sec:zext. For this, we introduce a new inductive type in Rocq, as shown in @snip:zext. Here, `Z` is the integer type of Rocq. The type corresponds exactly to the three cases of $Zext$: either it is an integer, $-infinity$, or $+infinity$.
+
+#snippet(title: [Definition of #Zext in Rocq, #codelink("Zext", "Zext")])[```
+Inductive Zext :=
+| zz : Z -> Zext
+| neg_inf : Zext
+| pos_inf : Zext.
+```] <snip:zext>
+
+We then define a module that is a subtype of `UsualOrderedTypeFull` from the `Structures.Orders` file of the Rocq standard library. `Usual` here relates to the fact that we have the usual Leibniz equality between elements. We then need to define and prove the required properties, such as `compare`. We also get the notation. Furthermore, by including a number of other modules that provide additional facts, we get a large amount of lemmas for free, nearly the same number as are available for `Z`. In particular, we include `GenericMinMax`, which automatically defines `min` and `max` and a number of useful lemmas (which we extend with additional standard library modules that provide additional properties for free).
+
+We also implement a number of tactics. We noticed that various of the lemmas that are automatically available are automatically unwrapped and stated in terms of the defined `Zext.compare`, instead of the more natural comparison operators we define. Therefore, we provide tactics that automatically replace instances of `Zext.compare` with the operators that have nicer notation and interpretation. The most essential tactic is `zext_as_z`, which rewrites $Zext$ comparisons that we know are between finite numbers in terms of the standard $ZZ$ comparison operators. Combined with the `lia` tactic, many goals can then be solved. We also provide some tactics to destruct instances of $Zext$ into the possible cases and try to solve the goal, but even with just a few instances, this can already be slow and generate too many cases. We found that doing the destruction manually often kept things more manageable. In fact, the infinity cases are often rather easy to solve with just simplification and tactics such as `easy`.
+
+We believe the value of using $Zext$ as opposed to using e.g., `option Z` is twofold:
+1. Since we get the definition of `min` and `max` and associated lemmas for free, we do not require defining special functions which work differently depending on whether `option Z` is a lower bound or upper bound. This also applies to writing tactics.
+2. The code and proofs are easier to read, as $<=, >=, <, >$ have a very well-known intuitive meaning.
+
+The proofs do not necessarily become easier, as tactics could also be written for `option Z` that would achieve similar convenience. We expected that the use of the `order` tactic would simplify many proofs, but we were unable to get it to work even in simple cases. It would most likely be easier to extend the `lia` tactic to $Zext$ than the previous approach. This would make most proofs trivial, but was not attempted in this work.
+
+==== Holes
+
+We implement the set of holes of a perforated interval with the `MSetInterface` from the Rocq standard library. More specifically, we use `MSetRBT` @filliatre2004functorproofprog @appel2011rbt. This implementation uses a red-black tree and therefore provides logarithmic lookup, deletion and insertion. Furthermore, when converting a set into a list, one gets the list in strictly increasing sorted order. `MSetRBT` was chosen due to the arguments provided in @appel2011rbt: they require much less bookkeeping computations using the Rocq `Z` integer type and were benchmarked to perform faster. However, we do not provide any systematic comparison in this work.
+
+==== Tighten symmetry
+
+We only stated and proved all the tightening lemmas for the lower bound case. However, we also want to prove the upper bound case. The proofs are almost entirely symmetrical, simply turning $<=$ into $>=$ and vice versa would be enough. However, we do not want to duplicate these proofs, as the proof is basically the same. Instead, we made the definitions and lemmas generic over $<=$ and $>=$. We first define a simple type `Sign` that is either plus or minus. Then, for $<=, <, <?$ we define operations that take a `Sign` as an additional parameter, where in the minus case the order of the arguments is swapped. We give one example below.
+
+#let zfliplink(name) = codelink("Domain", name, module: "ZFlip")
+
+#snippet(title: [Definitions for implementing tightening symmetry, #zfliplink("Sign"), #zfliplink("le_flip")])[
+```
+Inductive Sign :=
+| plus
+| min.
+
+Definition le_flip (sign : Sign) x y :=
+  match sign with
+  | plus => Z.le x y
+  | min => Z.le y x
+  end.
+```]
+
+Next, we define notation that makes it clear the actual direction of the operator depends on the provided sign. For example, we use the notation `x <=[z] y` to mean `le_flip z x y`. Finally, we define the following tactic:
+
+#snippet(title: [Tactic for automatically simplifying signed comparisons])[```
+Ltac simpl_sign :=
+  match goal with
+  | [ sign : Sign |- _ ] =>
+    unfold sign_to_z in *; unfold le_flip in *; 
+    unfold lt_flip in *; unfold ltb_flip in *; 
+    destruct sign
+  end.
+```]
+
+This tactic searches for a variable of type sign and, if it exists, unfolds all the earlier definitions and then splits into two cases. In our proofs, we often use this tactic at the very end, followed by `lia`. We also define a function `sign_to_z` that returns +1 for `plus` and -1 for `min`, which we use in our generic tighten function to either increase or decrease, depending on the sign. 
+
+This strategy removes most of the duplication present in the tightening proofs, leaving only a few cases like the actual `tighten_lb` and `tighten_ub` that work on domains.
+
+#pagebreak(weak: true)
+
+= Deduction step checker <sec:deduct>
+
+In the previous section, we introduced the perforated interval. With that as a building block, we now describe the formalization and implementation of the deduction step checking procedure (@proc:deduct). To track the domains, we use a map data structure that maps strings to perforated intervals. We will simply refer to these as "domain maps" (or `Domains` in pseudocode). Before we present the pseudocode of our implementation for the deduction step, we will go into more detail about the operations available on domain maps and how they can be constructed.
+
+== Domain maps <sec:domainmap>
+
+#let domvlink(name) = codelink("DomainVar", name)
+
+In this subsection, we will mostly avoid giving pseudocode and instead give high-level descriptions. This is because the implemention will have a significant dependence on the underlying map data structure. Furthermore, we do not go into detail about the various lemmas required for utilizing domain maps, except for the primary one necessary for soundness stated at the end. This is because these lemmas are mostly straightforward, albeit tedious, to prove. Furthermore, they are tightly coupled to our specific implementation and are mostly generalize the detailed facts we already know of the individual perforated interval operations to apply to multiple variables, or are related specifically to using the map.
+
+A domain map can be constructed directly from a list of atomic constraints, which then represents the domains of the variables when assuming every atomic constraint in the list must hold. For this process we use the function @fun:domains_from_atomics[l].
+
+#funlink(<desc:domains_from_atomics>, "domains_from_atomics")
+#fundesc(title: [(#domvlink("domains_from_atomics")) Given a list of atomics #atomics, where each atomic is of the form $[x diamond.small c]$, returns a map that maps each variable to a perforated interval. This map is constructed by first constructing a map that maps each variable to the atomics in #atomics mentioning that variable. Then @fun:apply_atomics is applied with an initial perforated interval of $(-infinity, infinity, nothing)$.])[```tiplang2
+Definition domains_from_atomics(atomics: List[BoundAtomic]) -> Domains:
+```
+] <desc:domains_from_atomics>
+
+Note that @fun:domains_from_atomics does not do any tightening. As tightening is relatively expensive, this saves a lot of work when tightening is not needed. Furthermore, it is possible for some domains to be inconsistent without the function failing. When we do need tightened and consistent domains, we can use @fun:tighten_doms[l] and @fun:check_domains_consistent[l].
+
+#funlink(<desc:tighten_doms>, "tighten_doms")
+#fundesc(title: [(#domvlink("tighten_doms")) Tightens the lower and upper bounds of all the perforated intervals stored in the map using @fun:tighten_lb and `tighten_ub` (which is defined analagously).])[```tiplang2
+Definition tighten_doms(doms: Domains) -> Domains:
+```
+] <desc:tighten_doms>
+
+#funlink(<desc:check_domains_consistent>, "check_domains_consistent")
+#fundesc(title: [(#domvlink("check_domains_consistent")) Returns #ttrue if @fun:check_consistency returns #ttrue for every perforated interval stored in the map and #ffalse otherwise.])[```tiplang2
+Definition check_domains_consistent(doms: Domains) -> bool:
+```
+] <desc:check_domains_consistent>
+
+These operations are useful, especially when considering multiple atomic constraints at once. However, in the case of the deduction step, we must ensure, before every inference, that the domains are tight. Tightening every domain (which, if every domain is already tight, still requires a single membership check for every variable domain) is not free. For this reason, there is also @fun:doms_apply_tighten[l]. 
+
+#funlink(<desc:doms_apply_tighten>, "doms_apply_tighten")
+#fundesc(title: [(#domvlink("doms_apply_tighten")) Updates only the domain stored in the domain map for the variable named by `atomic`. It then tightens the domain and checks for consistency. If the domain become inconsitent, it returns `None`, otherwise the updated domain map wrapped in `Some`.])[```tiplang2
+Definition doms_apply_tighten(doms: Domains, atomic: BoundAtomic) -> Option[Domains]:
+```
+] <desc:doms_apply_tighten>
+
+Let us now consider the most interesting fact, which is when we call a domain map "valid". First, we define the following function (where `initial_dom` = $(infinity, -infinity, nothing)$ and we use @fund:atomics_for_var[l]):
+
+#funlink(<pseudo:applied_dom>, "applied_dom")
+#pseudocode(title: [Specification function for domain induced by atomic constraints, (#domvlink("applied_dom"))])[
+```tiplang2
+Definition applied_dom(x: Id, atomics: List[BoundAtomic]) -> PerforatedInterval:
+  return apply_atomics(atomics_for_var(x, atomics), initial_dom)
+```
+] <pseudo:applied_dom>
+
+The above function outputs what we would like our variable domain to look like after we construct a domain map. However, we do not actually use the above function (as this would be very slow); it is only used to define the specification. To do this, let us define some notation. When $D$ is a domain map, $D(x)$ -- in the implementation, we use the notation `D d-> x` -- is the perforated interval stored for the variable $x$, or simply all of $ZZ$ in case nothing is stored for $x$. 
+
+#let applieddom = spro[applied_dom]
+
+#definition(title: [Domain map validity, #domvlink("valid_domains")])[
+  Let $D$ be a domain map and $atomics$ a list of atomic constraints. Then $D$ is _valid_ for $atomics$ if, for all $x$, $D(x) domeqv applieddom(D, atomics)$.
+]
+
+We skip the precise statements and proofs of the facts related to domain map validity, again because their proof relies on very specific implementation details and is rather mechanical. We quickly summarize them here:
+
+- The domain map produced by @fun:domains_from_atomics is valid for the atomics it is given.
+- If a domain map is valid for some list of atomics, then the result of applying @fun:doms_apply_tighten will also be valid for this list of atomics, as well as the additional atomic constraint that is given.
+- Since we proved that the result of @fun:tighten_doms is equivalent to its input, we immediately have that it also preserves domain map validity.
+
+Before moving on to the implementation of the deduction step, we also mention how domain maps are useful for inference checking.
+
+=== Inference checking <sec:res:infcheck>
+
+#let var = jmono[var]
+
+An inference of the form $a_1 and ... and a_m -> q$ can often be verified more easily by explicitly considering the domains of variables, as opposed to looking at the atomic constraints. More precisely, inferences can be verified if their associated constraint cannot be satisfied given the domain implied by $a_1 and ... and a_m and not q$. However, it is often useful for inference checking to know which variable is mentioned in the right-hand side, as this can provide a hint that speeds up verification in some cases (this is particularly important for the cumulative checker). For this reason, we define two functions. First, using @fund:negate_bound_atomic[l], we define @fun:atomics_from_fact[l], which, given a fact $a_1 and ... a_m -> q$, returns the atomics $a_1, a_2, ..., a_m, not q$ as well as $var(q)$.
+
+#let deductlink(name) = codelink("Deduction", name)
+
+#funlink(<pseudo:atomics_from_fact>, "atomics_from_fact")
+#pseudocode(title: [Extract consequent variable and convert to conflict form, #deductlink("atomics_from_fact")])[```tiplang2
+Definition atomics_from_fact(fact: ProofFact) -> Option[Id]*List[BoundAtomic]:
+  match consequent(fact):
+    case None:
+      return (None, premises(fact))
+    case Some(consq_var, consq_atomic):
+      negated := negate_bound_atomic((consq_var, consq_atomic))
+      return (Some(consq_var), negated :: premises(fact))
+```] <pseudo:atomics_from_fact>
+
+The second function -- @fun:infer_domains[l] -- then uses @fun:atomics_from_fact and the previously defined domain map operations.
+
+#funlink(<pseudo:infer_domains>, "infer_domains")
+#pseudocode(title: [Infer domain map and consequent variable from fact, #deductlink("infer_domains")])[```tiplang2
+Definition infer_domains(fact: ProofFact) -> Option[Domains*Option[Id]]:
+  (maybe_consq_var, atomics) := atomics_from_fact(fact)
+  doms := domains_from_atomics(atomics)
+  doms_tight := tighten_doms(doms)
+  if check_domains_consistent(doms_tight):
+    return Some(doms_tight, maybe_consq_var)
+  else:
+    return None
+```] <pseudo:infer_domains>
+
+We see that @fun:infer_domains returns exactly the domain map implied by $a_1 and ... and a_m and not q$, as well as the variable for $q$. It also checks for consistency, since that usually indicates there is something wrong with the inference. For @fun:infer_domains to be useful, we need a useful specification for it. For this, we introduce a second way for a domain map to be valid, but in this case with respect to a solution instead of a list of atomics. Note that this is exactly the same as in @def:assignment (assignments).
+
+#definition(title: [Domain map consistent with solution, #domvlink("sol_in_doms")])[
+  Let $theta$ be an assignment and $D$ a domain map. Then we say $theta$ is consistent with respect to $D$ if for all $x$, we have $theta(x) in D(x)$.
+] <def:sol_ind_doms>
+
+We now relate it to the concept of domain map validity we introduced earlier.
+
+#lemma(title: [Domain validity and assignment consistency, #domvlink("valid_domains_sol_in_doms_iff_valid_atoms")])[
+  Let $atomics$ be a list of atomics, $theta$ an assignment, and $D$ a domain map. Then, if $D$ is valid with respect to $atomics$, we have that the following are equivalent:
+  1. $theta$ satisfies $atomics$
+  2. $theta$ is consistent with respect to $D$
+]
+
+This finally gives rise to the specification of @fun:infer_domains:
+
+#let fact = jmono[fact]
+
+#lemma(title: [Specification of @fun:infer_domains, #deductlink("infer_domains_correct")])[
+  Let $fact$ be a fact and $D$ a domain map. Then, if `infer_domains(fact) = Some(D, _)`, we have that the following are equivalent for an arbitrary assignment $theta$:
+  1. $theta$ is *not* consistent with respect to $D$
+  2. $theta$ satisfies $fact$
+] <lem:infer_domains_correct>
+
+To see why this is useful, consider the following generic inference checker, where we assume `domain_cannot_satisfy_my_constraint` is a function that, when it returns `true`, is indeed correct that the constraint cannot be satisfied for the particular domain:
+
+#pseudocode(title: [Propagator inference checker structure])[```tiplang2
+Definition my_checker(fact: Fact, constraint: MyConstraint) -> bool:
+  match infer_domains(fact):
+    case None:
+      return false
+    case Some(doms, _):
+      if domain_cannot_satisfy_my_constraint(doms, constraint):
+        return true
+      else:
+        return false
+```]
+
+Proving soundness involves proving that if the checker returns #ttrue for a particular fact and constraint, then the fact must be satisfied by every assignment satisfying that constraint. More precisely:
+
+#lemma(title: "Soundness for generic constraint inference checker")[
+  Let $c$ be a constraint of type `MyConstraint` and let $fact$ be a fact s.t. `my_checker(fact, c) = true`. Then for all assignments $theta$ that satisfy $c$, we have that they also satisfy $fact$. 
+] <lem:soundness_generic>
+#proof()[
+  Let $theta$ be an assignment that satisfies $c$. Since `my_checker(fact, c) = true`, we see that @fun:infer_domains`(fact)` must have resulted in some domain $D$. We can then rewrite our goal using @lem:infer_domains_correct (@fun:infer_domains specification). We must then show that $theta$ is not consistent with respect to $D$. But this is exactly what `domain_cannot_satisfy_my_constraint` tests for, which we now to be `true` because our checker returned #ttrue.
+]
+
+== Deduction implementation
+
+The implementation of the deduction step is recursive, but otherwise follows @proc:deduct. 
+
+We now state the pseudocode for our implementation, where we use "Inductive" to mean a data type with multiple possible cases, which can optionally also contain data of another type (known also as an enum or union). First we define the recursive step @fun:step_inference[l] using @fund:all_premises_hold[l], which itself relies on @fun:check_holds. Furthermore, we now see the use of @fun:doms_apply_tighten[l] to apply the consequent of an inference fact.
+
+#pseudocode(title: [Deduction recursive step result, #deductlink("DeductStep")])[
+```tiplang2
+Inductive DeductStep:
+  case deduct_domains(domains: Domains)
+  case deduct_valid
+  case deduct_reject
+```
+]
+
+
+#funlink(<pseudo:step_inference>, "step_inference")
+#pseudocode(title: [Recursive step for one inference, #deductlink("step_inference")])[
+```tiplang2
+Definition step_inference(fact: ProofFact, domains: Domains) -> DeductStep:
+  if all_premises_hold(premises(fact), domains):
+    match consequent(fact):
+      case None:
+        return deduct_valid
+      case Some(consequent):
+        match doms_apply_tighten(domains, consequent):
+          case None:
+            return deduct_valid
+          case Some(domains'):
+            return deduct_domains(domains')
+  else:
+    return deduct_reject
+```
+] <pseudo:step_inference>
+
+As we can see, either the domain is updated, or we find that updating leads to an inconsistency (in which case the nogood is valid), or we see that some inference cannot be applied because its premises are not satisfied. Now we define the outer recursive function: @fun:deduct_check_inferences[l].
+
+#pseudocode(title: [Deduction check result, #deductlink("CheckDeductResult")])[
+```tiplang2
+Inductive CheckDeductResult:
+  case deduced
+  case failed
+```
+]
+#funlink(<pseudo:deduct_check_inferences>, "deduct_check_inferences")
+#pseudocode(title: [Deduction checker with initialized domains, #deductlink("deduct_check_inferences")])[
+```tiplang2
+Recursive deduct_check_inferences(
+  facts: List[ProofFact], 
+  domains: Domains
+) -> CheckDeductResult:
+  match facts:
+    case nil:
+      return deduct_failed
+    case fact :: facts':
+      match step_inference(fact, domains):
+        case deduct_domains domains':
+          return deduct_check_inferences(facts', domains')
+        case deduct_valid:
+          return deduced
+        case deduct_reject:
+          return deduct_failed
+```
+] <pseudo:deduct_check_inferences>
+
+However, @fun:deduct_check_inferences can only be initialized with domains. However, in the deduction step we are verifying a fact. More specifically, we are verifying a nogood, which has no consequent and is therefore defined only by its premises. This gives @fun:check_deduct[l].
+
+#funlink(<pseudo:check_deduct>, "check_deduct")
+#pseudocode(title: [Deduction checker, #deductlink("check_deduct")])[
+```tiplang2
+Definition check_deduct(
+  premises: List[BoundAtomic], 
+  steps: List[ProofFact]
+) -> CheckDeductResult:
+  doms := domains_from_atomics(premises)
+  doms_tight := tighten_doms(doms)
+  if check_domains_consistent(doms):
+    return deduct_check_inferences(steps, doms_tight)
+  else:
+    return failed
+``` 
+] <pseudo:check_deduct>
+
+Before we state the main correctness lemma, which does not actually mention domain maps as these are an implementation detail and not present in the signature of @fun:check_deduct, we state the lemma that specifies the correctness of @fun:deduct_check_inferences. This is also the main inductive proof.
+
+#let steps = jmono[steps]
+
+#lemma(title: [Correctness of @fun:deduct_check_inferences, #deductlink("deduct_check_inferences_correct")])[
+  Let $v$ be an assignment, $atomics$ a list of atomic constraints, and $D$ a domain map s.t. $D$ is valid for $atomics$. Furthermore, let $steps$ be a list of inference facts. Then, if we have that $v$ satisfies every inference $s in steps$ and if `deduct_check_inferences(steps, D) = deduced`, then $v$ satisfies the fact with premises equal to $atomics$ and an empty consequent.
+] <lem:deduct_check_inferences>
+
+We omit the proof as it follows quite easily when performing induction over $steps$, although it is still somewhat tedious. We do mention that the case where `DeductStep` is valid, but the inference has a non-empty consequence. We must then have that applying the consequent leads to an empty domain for the consequent variable. To then prove that the assignment satisfies the nogood, we use the knowledge that if an assignment satisfies a list of atomic constraints, applying these atomics must result in a consistent domain (since the assignment's value must be in the domain, so it is non-empty). This then results in the contradiction we need to verify the nogood.
+
+With the above lemma in hand, we can state the primary lemma that is used by the checker, which does not care about how domains are actually implemented.
+
+#lemma(title: [Correctness of @fun:check_deduct, #deductlink("check_deduct_correct")])[
+  Let $v$ be an assignment, $atomics$ a list of atomic constraints, and $steps$ a list of inference facts. Then, if we have that $v$ satisfies every inference $s in steps$ and if @fun:check_deduct`(atomics, steps) = deduced`, then $v$ satisfies the fact with premises equal to $atomics$ and an empty consequent.
+] <lem:deduct_check>
+
+We omit the proof as it follows immediately from @fun:deduct_check_inferences and the properties of the domain map operations.
+
+== Implementation considerations
+
+=== Domain maps <sec:domainmap:impl>
+
+The map data structure (#codelink("Utility", "", module: "Maps")) comes from the `MMaps` Rocq community library @mmaps2024 @filliatre2004functorproofprog @appel2011rbt and is a modernization of the `FMaps` file in the Rocq standard library. We expect it will, at some point, be accepted into the standard library. It was selected because it also contains an implementation based on red-black trees, which is not the case for `FMaps`. 
+
+=== Error handling
+
+The original implementation of the deduction step was almost identical to the pseudocode. However, it was later enhanced with the ability to propagate what exact premise causes the deduction step to fail. We removed this for the sake of clarity and because this was not an original contribution of the author.
+
+#pagebreak(weak: true)
+
+= Alldifferent checker <check:alldiff>
+
+We saw in @sec:prelim:alldiff that, according to @thm:hall, there is a necessary condition for all alldifferent conflicts. Our checker exploits exactly this. We do not actually formalize the fact that this condition is necessary, as for soundness, we only need that it is a sufficient condition. We developed this proof in a way that is mostly agnostic to the actual checker implementation. We state and prove it below.
+
+#let vars = spro[variables]
+#let domunion = spro[domain_union]
+#let doms = spro[doms]
+#let mapfn = jmono[map]
+#let varvals = spro[vars_values]
+
+#lemma(title: [Sufficient condition for alldifferent unsatisfiability, #alldifflink("alldiff_conflict_if_union_lt_vars")])[Let #vars be a list of variables with no duplicates, #doms a mapping of variables to a _materialized_ domain (a finite set explicitly listing all values in a variable's domain) and #domunion a list of integers with no duplicates s.t. $forall n, n in domunion <-> exists x, x in vars and n in doms(x)$. Then, if the length of #domunion is strictly less than the length of #vars, there exists no solution $v$ that satisfies the alldifferent constraint with variables #vars and where $v(x) in doms(x)$ (for all $x in vars$).] <lem:alldiff_suff>
+#proof[
+  Our goal is to prove that there exists no solution. That means that if such a solution exists, there must be a contradiction. Therefore, let $v$ be an assignment that satisfies the alldifferent constraint defined by #vars and such that $forall x in vars, v(x) in doms(x)$. It is enough to show that the length of #domunion is greater than or equal to the length of #vars, since we assumed the opposite, and if this is the case, we can derive a contradiction, which is our goal. 
+
+  Now, the length of #vars is the same as the length of $mapfn(v, vars)$, which is the list obtained by mapping all variables to their assignment according to $vars$#footnote[This fact holds for any list and function and can be proven by induction. Length is defined recursively in the natural way.]. We will call this mapped list of values #varvals. We can now replace our goal with showing that the length of #domunion is greater than or equal to the length of #varvals.
+
+  We now use the well-known fact that states that if a list has no duplicates and every element of that list is also in another list, then the length of this list must be smaller than the list it is contained in. Applied to our goal, all that is then left to show is that #varvals has no duplicates and is indeed contained in #domunion. 
+
+  First, we show that #varvals contains no duplicates. For this we use a lemma that states that when a function $f$ is injective (i.e., when $f(x)=f(y)$, $x=y$, also known as one-to-one) for all inputs that are elements of some list $L$, then if that list has no duplicates, $mapfn(f, L)$ will also have no duplicates. Applied to our goal of showing #varvals has no duplicates, it remains to show that $v$ is injective on #varvals. For this, let $x$ and $y$ be two variables in #vars such that $v(x) = v(y)$. The goal is then to show that $x$ and $y$ are equal. However, since $v(x) != v(y)$ because of our assumption that $v$ satisfies the alldifferent constraint defined on #vars, we are done as this conflicts with $v(x) = v(y)$. Furthermore, one of our main assumptions was that #vars had no duplicates.
+
+  We have now proven the first subgoal, leaving only the requirement that #varvals is contained in #domunion. Let $n$ be an arbitrary element of #varvals. Then we are done if $n$ is also in #domunion. First, note that since $n$ is in a mapped list, there must exist $x$ s.t. $x in vars$ and $n = v(x)$. #footnote[This fact holds for any list and function and can again be proven through induction, through the definition of map].
+  No,w based on our assumptions, $n$ is an element of $domunion$ exactly if there exists an $x'$ such that $x' in vars$ and $n in doms(x')$. Let $x$ be this $x'$. The first condition we already showed, and since $v(x) in doms(x)$, we must have that $n in doms(x)$. 
+]
+
+We now present the pseudocode for the actual checker, which we prove to be sound with the earlier lemma. We use the functions from @sec:res:infcheck (inference checking results), in particular, @fun:infer_domains[l]. 
+
+To apply @lem:alldiff_suff, we must compute length of the union of all domains. To do this using perforated intervals would require taking the min/max of the bounds as well as the intersection of all holes. However, to simplify our proofs and implementation, we instead choose to first materialize every perforated interval into a finite set of values and then compute the union. We do this with @fun:materialize_vars_doms[l].
+
+#funlink(<desc:materialize_vars_doms>, "materialize_vars_doms")
+#fundesc(title: [(#alldifflink("materialize_vars_doms")) For each variable in `vars`, looks up the perforated interval in `domains` and, if it is bounded, materializes it as a set of values and adds it to the output list. The materialization is performed by first constructing a range from the upper to the lower bound and then remove every hole. An alternative would be to check first if an element in the range is a hole before adding it to the final set, but we choose the first implementation as it is simpler.])[```tiplang2
+Definition materialize_vars_doms(vars: List[Id], domains: Domains) -> List[Set[Z]]:
+```
