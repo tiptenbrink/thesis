@@ -72,7 +72,7 @@
 <div class="bg-gray-white flex flex-col justify-center w-dvw h-dvh font-[Zilla_Slab]">
   <div class="w-full h-auto aspect-video bg-cover bg-no-repeat bg-[url(/tudelft.svg)] grid grid-rows-[1fr_10fr_2fr]">
   <div class=""></div>
-  <div class="bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+  <div class="bg-gradient-to-br from-paars-white via-white to-turkoois-white">
     <div class="grid grid-cols-[2fr_12fr_2fr] w-full h-full">
       <div class="bg-gray-white"></div>
       <div class="contents"><Visible {animation} /></div>

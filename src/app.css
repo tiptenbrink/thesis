@@ -15,10 +15,12 @@
     --color-donkerblauw-muted: oklch(0.3253 0.0248 255.53);
     --color-turkoois: oklch(0.7145 0.1222 205.82);
     --color-turkoois-muted: oklch(0.7845 0.0489 205.82);
+    --color-turkoois-white: oklch(0.93 0.019 205.82);
     --color-koningsblauw: oklch(0.5514 0.1465 247.46);
     --color-koningsblauw-muted: oklch(0.6214 0.0586 247.46);
     --color-paars: oklch(0.4031 0.1580 324.06);
     --color-paars-muted: oklch(0.4731 0.0632 324.06);
+    --color-paars-white: oklch(0.93 0.019 324.06);
     --color-roze: oklch(0.6893 0.1878 354.01);
     --color-roze-muted: oklch(0.7593 0.0751 354.01);
     --color-bordeaux: oklch(0.4587 0.1834 15.40);
