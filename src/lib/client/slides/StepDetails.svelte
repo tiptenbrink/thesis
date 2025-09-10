@@ -1,5 +1,5 @@
 <script module>
-  export const animations = 4
+  export const animations = 5
 </script>
 <script lang="ts">
   let props: { animation: number } = $props()
@@ -11,10 +11,18 @@
 <div class="h-full w-full p-6 flex flex-col justify-center">
   {#if version === "A"}
     <!-- Version A: Structure-first approach -->
-    <!-- <h1 class="text-present-xl font-bold text-center mb-6 text-paars">What is a Step?</h1> -->
-    
+        
     <div class="flex flex-col justify-center h-full space-y-6">
-      {#if props.animation >= 0}
+      <h1 class="text-present-xl font-bold text-center mb-6">Let's build a CP proof checker</h1>
+
+      {#if props.animation >= 1}
+        <div class="text-center">
+          <p class="text-present">CP proof checker project with:</p>
+          <p class="text-present-small"><strong>Maarten Flippo, Konstantin Sidorov, Emir Demirović</strong></p>
+        </div>
+      {/if}
+
+      {#if props.animation >= 2}
         <div class="grid grid-cols-3 gap-6">
           <div class="p-4 bg-green-100 rounded-lg text-center flex items-center justify-center h-28">
             <p class="text-present font-bold text-bosgroen">Constraint Programming</p>
@@ -28,28 +36,20 @@
         </div>
       {/if}
       
-      {#if props.animation >= 1}
         <div class="grid grid-cols-3 gap-6">
           <div></div>
-          <div class="p-4 bg-purple-100 rounded-lg text-center flex flex-col items-center justify-center h-28">
-            {#if props.animation == 1}
+          <div class={"p-4 bg-purple-100 rounded-lg text-center flex flex-col items-center justify-center h-28 " + (props.animation >= 3 ? '' : 'invisible')}>
+            {#if props.animation == 3}
             <p class="text-present font-bold text-paars">Step</p>
-            {:else if props.animation >= 2}
+            {:else if props.animation >= 4}
             <p class="text-present font-bold text-paars">Step</p><p class="text-present-small">My contribution!</p>
 
             {/if}
                       </div>
           <div></div>
         </div>
-      {/if}
       
-      {#if props.animation >= 3}
-        <div class="text-center">
-          <p class="text-present-small">CP proof checker project with:</p>
-          <p class="text-present-small"><strong>Maarten Flippo, Konstantin Sidorov, Emir Demirović</strong></p>
-        </div>
-      {/if}
-    </div>
+          </div>
     
   {:else if version === "B"}
     <!-- Version B: Problem-first approach -->

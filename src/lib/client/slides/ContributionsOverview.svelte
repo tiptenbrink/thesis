@@ -5,38 +5,38 @@
   let props: { animation: number } = $props()
   
   // Toggle between different design approaches
-  let designVersion = "E" // Options: A (Grid), B (Timeline), C (Pyramid), D (Circular), E (Stylish)
+  let designVersion = "A" // Options: A (Grid), B (Timeline), C (Pyramid), D (Circular), E (Stylish)
 </script>
 
 <div class="h-full w-full p-6 flex flex-col justify-center">
-  <h1 class="text-present-xl font-bold text-center mb-6">My Contributions</h1>
+  <h1 class="text-present-xl font-bold text-center mb-6 text-paars">My Contributions</h1>
   
   {#if designVersion === "A"}
     <!-- Design A: Grid Layout -->
     <div class="grid grid-cols-2 gap-6">
       {#if props.animation >= 1}
-        <div class="p-4 border-2 border-gray-300 rounded-lg text-center">
+        <div class="p-4 bg-bosgroen-muted rounded-lg text-center shadow-md">
           <p class="text-present font-bold">Constraint checkers</p>
           <p class="text-present-small mt-1">Cumulative + Alldifferent</p>
         </div>
       {/if}
       
       {#if props.animation >= 2}
-        <div class="p-4 border-2 border-gray-300 rounded-lg text-center">
+        <div class="p-4 bg-koningsblauw-muted rounded-lg text-center shadow-md">
           <p class="text-present font-bold">Methodology</p>
           <p class="text-present-small mt-1">For developing new checkers</p>
         </div>
       {/if}
       
       {#if props.animation >= 3}
-        <div class="p-4 border-2 border-gray-300 rounded-lg text-center">
+        <div class="p-4 bg-bordeaux-muted rounded-lg text-center shadow-md">
           <p class="text-present font-bold">Deduction checker</p>
           <p class="text-present-small mt-1">Combines previous steps</p>
         </div>
       {/if}
       
       {#if props.animation >= 4}
-        <div class="p-4 border-2 border-gray-300 rounded-lg text-center">
+        <div class="p-4 bg-geel-muted rounded-lg text-center shadow-md">
           <p class="text-present font-bold">Perforated intervals</p>
           <p class="text-present-small mt-1">Domain representation theory</p>
         </div>

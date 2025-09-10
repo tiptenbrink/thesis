@@ -1,9 +1,10 @@
 <script module>
-  export const animations = 5
+  export const animations = 6
 </script>
 <script lang="ts">
   let props: { animation: number } = $props()
   import cumulFigure from '$lib/assets/cumulFigure.svg'
+  import cumulFigureBad from '$lib/assets/cumulFigureBad.svg'
   
   // Toggle between different motivation approaches
   let motivationOption = "A" // Options: A (Healthcare-first), B (Problem-first), C (Trust-first)
@@ -35,7 +36,7 @@
               {/if}
             </div>
             <div class={(props.animation >= 4 ? "" : "invisible ") + "flex items-center justify-center"}>
-              <img src={cumulFigure} alt="cumul figure" class="max-w-full h-[90%]">
+              <img src={props.animation == 4 ? cumulFigureBad : cumulFigure} alt="cumul figure" class="max-w-full h-[90%]">
             </div>
           </div>
         </div>
