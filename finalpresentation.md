@@ -13,7 +13,7 @@ Well, as I said, Constraint Programming (CP) is a paradigm for solving optimizat
 
 As the name suggests, in CP you describe problems using constraints. How does that look like? Well, consider we have, in some time window in a hospital, 2 doctors available at a given moment and we need to perform 3 different operations. Operations a, b need 1 doctor. c needs 2 doctor. 
 
-We've now described a common constraint, and one that I studied at length in my thesis: a cumulative constraint, which basically ensures that given some capacity, in this case 2 doctor, we never exceed that capacity at any timepoint. Here is a possible schedule, where the height represents the number of doctors needed.
+This is a common constraint, and one that I studied at length in my thesis: a cumulative constraint, which basically ensures that given some capacity, in this case 2 doctor, we never exceed that capacity at any timepoint. Here is a possible schedule, where the height represents the number of doctors needed.
 
 What is the optimization aspect? In this case that could be minimizing the total time. Here we're taking 5 units of time. Clearly, a better solution is the following schedule.
 
@@ -24,7 +24,7 @@ So what is now our main challenge? What's the problem that I'm helping to solve?
 - The type of mistake _we_ are interested in is when a solver claims that a problem is optimality? Or equivalently, and that's what we will focus on, when a problem is impossible (or unsatisfiable)? 
 - Question for you, I hope the CS students here know the answer, why is this equivalent? Also, why is it harder than the case when a solver claims it has found a solution? Why is that case less interesting?
 <!-- skip: - Answer: we can just check whether solution satisfies all constraints. In our doctor example, just check we never exceed 2 doctors used -->
-- Okay, so we focus on claims that problems are unsatisfiable. How do we check those? The main idea is this: make solvers record their reasoning, this record forms a proof
+- Okay, so we focus on claims that problems are unsatisfiable. How do we verify those claims? The main idea is this: make solvers record their reasoning, this record forms a proof
 - Then we check that proof the proof is valid
 
 todo? am i explaining research gap enough?
@@ -33,7 +33,7 @@ todo? have i motivated enough why these mistakes are bad?
 
 # Build proof checker (slide 4)
 
-Okay, so we want to build a CP proof checker. Everything we've seen until now was already well-studied. The idea of building a proof checker is not mine. Furthermore, building such a checker is a large undertaking.Thankfully, I'm not doing it alone. My work is part of "the CP proof checker project"; led by my supervisor and two PhD'ers, Maarten Flippo and Konstantin Sidorov.
+Okay, so we want to build a CP proof checker. Everything we've seen until now was already well-studied. The idea of building a proof checker is not mine. Furthermore, building such a checker is a large undertaking.Thankfully, I'm not doing it alone. My work is part of "the CP proof checker project"; led by my supervisor and two PhD'ers.
 
 What part am I doing? Well, remember that I mentioned that proofs consist of many different steps. Of course, most things consist of steps. The question is, what kind of steps? 
 
@@ -41,7 +41,7 @@ Solvers perform many types of reasoning, many times. As they work, they build up
 
 If we remember the doctor example, an example of a fact would be this: scheduling operation c and a at time 0 is impossible. Why? Well, then we would need 3 doctors, which is forbidden by the cumulative constraint!
 
-Proofs are then a huge sequence of mini-claims. All these mini-claims together should then imply the main claim: that the problem is unsatisfiable. 
+Proofs are then a huge sequence of mini-claims. All these mini-claims together should then imply the main claim: that the problem is unsatisfiable or optimal. 
 
 A proof checker than needs to do two things:
 - Check that every mini-claim is true
@@ -61,18 +61,19 @@ As you can see, I've hidden a part of the research question. We'll get to that i
 
 I will now list my main contributions.
 
-- I have implemented two constraint-specific checkers, one for cumulative and one for alldifferent. Cumulative we already saw at the beginning of this presentation. Alldifferent is a constraint that requires a list of values to all be distinct; i.e., all different. 
+- I have implemented two constraint-specific checkers, which check mini-claims that involve specific constraints. One for cumulative and one for another constraint: alldifferent. Alldifferent is a constraint that requires a list of values to all be distinct; i.e., all different. 
 
 - Of course, my research question was _how_  can we develop checkers for individual steps. So
 
 - I have also developed a methodology for developing new constraint-specific checkers. Since there are many different types of constraints, we want to add support for more of them. Future work can now use my methodology to make this easier.
 
-- Furthermore, I implemented a checker for what is 
-called the "deduction step". Other than the constraint-specific steps, which capture reasoning a solver makes to rule off possibilities since they don't satisfy a particular constraint, the deduction step _combines_ previous steps to, well, _deduce_ new facts. 
+- Furthermore, I implemented a checker for a mini-claim that is known as a "deduction". As opposed to the constraint-specific claims, deduction mini-claims refer to previous mini-claims to support new mini-claims. So they combine them.
 
 ? todo: temporarily expand to show the details here
 
-- To make these developments possible, we needed some building blocks. In these problems we have so-called variables: things that are not fixed and we want to find the value of. If you remember our doctor/operation problem, the starting time of each particular operation was the variable. In practice, we work only with _integer_ variables, so variables that are either -2, -1, 0, 1, 2, etc. Variables can have domains, which are sets of values the variable can take. Almost all the reasoning we do includes reasoning over these domains. For that reason, I developed a specialized integer domain representation known as perforated intervals. We will discuss them in more detail later.
+- It turns out, these checkers share a lot of common logic. A big chunk of this logic is related to "domains". Remember our doctor/operation problem. 
+
+To make these developments possible, we needed some building blocks. In these problems we have so-called variables: things that are not fixed and we want to find the value of. If you remember our doctor/operation problem, the starting time of each particular operation was the variable. In practice, we work only with _integer_ variables, so variables that are either -2, -1, 0, 1, 2, etc. Variables can have domains, which are sets of values the variable can take. Almost all the reasoning we do includes reasoning over these domains. For that reason, I developed a specialized integer domain representation known as perforated intervals. We will discuss them in more detail later.
 
 ? todo: again, temporarily expand to show the details here
 
