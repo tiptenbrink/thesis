@@ -18,12 +18,12 @@
         <div class="text-present-xl leading-relaxed">
           <span class="font-bold text-koningsblauw relative">
             <span class="px-2 py-1 rounded {props.animation === 4 ? 'bg-donkergrijs-muted text-white' : ''}">Proof</span>
-            <span class="font-semibold text-paars px-2 py-1 rounded {props.animation === 5 ? 'bg-donkergrijs-muted text-white' : ''}">Step</span>
+            <span class="font-semibold text-paars px-2 py-1 rounded {props.animation === 6 ? 'bg-donkergrijs-muted text-white' : ''}">Step</span>
             <span class="px-2 py-1 rounded {props.animation === 4 ? 'bg-donkergrijs-muted text-white' : ''}">Checking</span>
           </span>
           <span class="text-donkergrijs-muted font-light">in a</span>
           <span class="font-semibold text-bosgroen relative">
-            <span class="px-2 py-1 rounded {props.animation === 6 ? 'bg-donkergrijs-muted text-white' : ''}">Constraint Programming</span>
+            <span class="px-2 py-1 rounded {props.animation === 5 ? 'bg-donkergrijs-muted text-white' : ''}">Constraint Programming</span>
           </span>
           <span class="font-semibold text-bordeaux relative">
             <span class="px-2 py-1 rounded {props.animation === 3 ? 'bg-donkergrijs-muted text-white' : ''}">Unsatisfiability</span>
@@ -32,8 +32,10 @@
             <span class="px-2 py-1 rounded {props.animation === 4 ? 'bg-donkergrijs-muted text-white' : ''}">Proof Checker</span>
           </span>
         </div>
-        <div class="text-present mt-4 {props.animation === 3 ? '' : 'invisible'}">
-          Unsatisfiable = problem has no solution
+        <div class="text-present mt-4">
+          <p class={props.animation === 5 ? '' : 'hidden'}>Type of solver, good at scheduling</p>
+          <p class={props.animation === 3 ? '' : 'hidden'}>Problem has no solution</p>
+          <p class={(props.animation === 5 || props.animation === 3) ? 'hidden' : 'invisible'}>Problem has no solution</p>
         </div>
       </div>
     </div>

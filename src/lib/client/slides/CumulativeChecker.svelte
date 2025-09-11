@@ -20,7 +20,7 @@
             <p class="text-present-small">• Operation B starting time domain {'{'}1{'}'}</p>
             <p class="text-present-small">• Operation C starting time domain {'{'}0,1,2{'}'}</p>
             <div class="mt-3 bg-bosgroen-light rounded-lg text-center {props.animation >= 5 ? '' : 'invisible'}">
-              <p class="text-present-small font-semibold text-bosgroen">Operation violation</p>
+              <p class="text-present-small font-semibold">Operation violation</p>
               <p class="text-present-small">Focus on specific operation</p>
             </div>
           </div>
@@ -33,7 +33,7 @@
     
     {#if props.animation >= 2 && props.animation < 4}
       <div class="text-center">
-        <p class="text-present-large">Every mini-claim: domains → constraint violation</p>
+        <p class="text-present-large">Every mini-claim: domains → conflict</p>
       </div>
     {/if}
     

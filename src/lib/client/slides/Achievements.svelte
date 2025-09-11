@@ -15,20 +15,20 @@
       {#if props.animation >= 1}
         <div class="text-center">
           <p class="text-present-large"><strong class="text-koningsblauw">Check solver work</strong></p>
-          <p class="text-present-small">Two common subproblems</p>
+          <p class="text-present-small">For two common subproblems</p>
         </div>
       {/if}
       
       {#if props.animation >= 2}
         <div class="text-center">
-          <p class="text-present-large"><strong class="text-paars">Combine knowledge</strong></p>
-          <p class="text-present-small">From different subproblems</p>
+          <p class="text-present-large"><strong class="text-paars">Check solver work</strong></p>
+          <p class="text-present-small">Combine knowledge from different subproblems</p>
         </div>
       {/if}
       
       {#if props.animation >= 3}
         <div class="text-center">
-          <p class="text-present-large"><strong class="text-bordeaux">Extend the checker</strong></p>
+          <p class="text-present-large"><strong class="text-bordeaux">Methodology</strong></p>
           <p class="text-present-small">Handle more subproblems</p>
         </div>
       {/if}

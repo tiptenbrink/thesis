@@ -12,11 +12,20 @@
     
     <div class="space-y-4">
       <p class="text-present-large font-semibold">Tip ten Brink</p>
-      <p class="text-present">Supervisor: E. Demirović</p>
+      <div class="grid grid-cols-2 gap-4 mx-auto">
+        <div class="text-right">
+          <p class="text-present-small">Thesis committee:</p>
+        </div>
+        <div class="text-left">
+          <p class="text-present-small">Emir Demirović (supervisor)</p>
+          <p class="text-present-small">Benedikt Ahrens</p>
+        </div>
+      </div>
+      
     </div>
     
     <div class="flex justify-center">
-      <img src={tudelftLogo} alt="TU Delft Logo" class="w-96">
+      <img src={tudelftLogo} alt="TU Delft Logo" class="w-[30vw]">
     </div>
   </div>
 </div>

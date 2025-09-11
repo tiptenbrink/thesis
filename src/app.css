@@ -29,6 +29,7 @@
     --color-rood-muted: oklch(0.6719 0.0810 28.59);
     --color-oranje: oklch(0.6751 0.1732 36.67);
     --color-oranje-muted: oklch(0.7451 0.0693 36.67);
+    --color-oranje-light: oklch(0.6751 0.1732 36.67 / 20%);
     --color-geel: oklch(0.8277 0.1667 79.60);
     --color-geel-muted: oklch(0.8977 0.0667 79.60);
     --color-groen: oklch(0.7344 0.1772 137.94);

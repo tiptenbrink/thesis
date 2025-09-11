@@ -19,12 +19,12 @@
           <p class="text-present mt-1">Two common subproblems</p>
         {:else if props.animation === 2}
           <!-- Expanded with details -->
-          <p class="text-present font-bold text-koningsblauw">Two constraint-specific checkers</p>
+          <p class="text-present font-bold text-koningsblauw">Check constraint-specific mini-claims</p>
           <p class="text-present-small mt-1">• <strong>Cumulative:</strong> activities using limited capacity</p>
           <p class="text-present-small">• <strong>Alldifferent:</strong> all values distinct</p>
         {:else}
           <!-- Final compact form -->
-          <p class="text-present font-bold text-koningsblauw">Two constraint-specific checkers</p>
+          <p class="text-present font-bold text-koningsblauw">Two constraint mini-claim checkers</p>
           <p class="text-present mt-1">Cumulative + Alldifferent</p>
         {/if}
       </div>
@@ -40,7 +40,7 @@
         {:else if props.animation === 4}
           <!-- Expanded with details -->
           <p class="text-present font-bold text-bordeaux">Constraint checker methodology</p>
-          <p class="text-present-small mt-1">Support new constraint-specific checkers beyond cumulative and alldifferent</p>
+          <p class="text-present-small mt-1">Support new constraint-specific mini-claim checkers beyond cumulative and alldifferent</p>
         {:else}
           <!-- Final compact form -->
           <p class="text-present font-bold text-bordeaux">Constraint checker methodology</p>

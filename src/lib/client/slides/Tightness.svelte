@@ -33,7 +33,7 @@
         {#if props.animation >= 4}
           <div class="p-4 bg-green-50 rounded-lg text-center">
             <p class="text-present font-semibold text-bosgroen">Tight:</p>
-            <p class="text-present font-mono mt-2">[1,2]</p>
+            <p class="text-present font-mono mt-2">[2,3]</p>
             <!-- <p class="text-present-small mt-2">No holes at bounds → simple</p> -->
             <!-- <p class="text-present-small">Lower bound = 1 (obvious!)</p> -->
           </div>

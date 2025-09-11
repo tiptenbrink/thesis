@@ -21,7 +21,7 @@
     <div class="col-span-2 space-y-4">
       {#if props.animation >= 1}
         <div class="text-center">
-          <p class="text-present-large">What if solver says a schedule isn't possible?</p>
+          <p class="text-present-large">What if solver incorrectly says a schedule isn't possible?</p>
         </div>
       {/if}
       
@@ -31,12 +31,10 @@
             <p class="text-present font-bold">Best case:</p>
             <p class="text-present-small mt-2">Delaying treatment</p>
           </div>
-          {#if props.animation >= 3}
-            <div class="p-4 bg-bordeaux text-white rounded-lg text-center">
-              <p class="text-present font-bold">Worst case:</p>
-              <p class="text-present-small mt-2">Fewer nurses on the night shift</p>
-            </div>
-          {/if}
+          <div class="p-4 bg-bordeaux text-white rounded-lg text-center {props.animation >= 3 ? '' : 'invisible'}">
+            <p class="text-present font-bold">Worst case:</p>
+            <p class="text-present-small mt-2">Fewer nurses on the night shift</p>
+          </div>
         </div>
       {/if}
       

@@ -42,7 +42,8 @@
     <div class="text-center border-t-2 border-gray-200 pt-4">
       <p class="text-present font-bold mb-1">Tip ten Brink</p>
       <p class="text-present-small text-koningsblauw mb-2">Proof Step Checking in a Constraint Programming Unsatisfiability Proof Checker</p>
-      <p class="text-present-small">Supervisor: E. Demirović</p>
+      <p class="text-present-small">Supervisor: Emir Demirović</p>
+      <p class="text-present-small">Thesis committee: Benedikt Ahrens</p>
     </div>
   {/if}
 </div>

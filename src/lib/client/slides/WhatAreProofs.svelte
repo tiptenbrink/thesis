@@ -17,14 +17,15 @@
     
     {#if props.animation >= 2}
       <div class="text-center">
-        <p class="text-present-large">• CP solvers learn things about problems progressively</p>
+        <p class="text-present-large">CP solvers progressively learn more things</p>
       </div>
     {/if}
     
     {#if props.animation >= 3}
       <div class="p-4 bg-koningsblauw-muted rounded-lg text-center">
-        <p class="text-present font-semibold">Proofs = sequences of mini-claims</p>
-        <p class="text-present-small mt-2">Each step is a mini-claim!</p>
+        <p class="text-present font-semibold">Proof = sequence of mini-claims</p>
+        <p class="text-present-small mt-2">Mini-claim about knowledge being true</p>
+        <p class="text-present-small mt-2">Each step is a mini-claim</p>
       </div>
     {/if}
     
