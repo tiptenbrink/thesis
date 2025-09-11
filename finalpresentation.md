@@ -1,81 +1,98 @@
-# Title slide (slide 1)
 
-Hi, everyone. Great to see all of you. Today I'll be presenting my thesis, titled "Proof Step Checking in a Constraint Programming Unsatisfiability Solver".
 
-Like many thesis titles, it's quite a mouthful, so let's break it down. And don't worry, we'll go over everything again in more detail later. First, Constraint Programming is a paradigm for modeling and solving optimization problems. Unsatisfiability is when such a problem has no solution; turns out, it's hard to check this. Proof Checking involves, as the name implies, checking a proof. A proof of what? Well, proofs that problems have no solutions, so unsatisfiability proofs.
-And finally, such proofs consist of many different steps. That is my contribution, checking the individual steps in a proof.
+# elevator pitch version
 
-# Motivation (slide 2)
+Checking a Solver's Work
 
-As I promised, let's now look at this in more detail. In particular, I want to explain why this is even useful.
+First of all, it's great to see all of you. Let's dive straight in.
 
-Well, as I said, Constraint Programming (CP) is a paradigm for solving optimization problems. What kind of problems? Let's look at a problem that CP is good at.
+Finding optimal schedules for nurses and doctors is a prime example of a problem computers have become very good at solving. Computer solvers are able to evaluate many more possibilities than humans can and are able to leverage all kinds of algorithmic tricks. However, what if a solver program incorrectly claims that some important constraints, like a minimum amount of staffing on a shift, can't be met? In the best case this means delaying treatments. In the worst case, one fewer nurse is scheduled on a night shift where multiple patients suddenly require urgent care. You can imagine the consequences. Today, I am presenting my research, which will make new tools available for a large class of solvers that can catch these erroneous results before they have a chance to cause harm.
+~1 min
 
-As the name suggests, in CP you describe problems using constraints. How does that look like? Well, consider we have, in some time window in a hospital, 2 doctors available at a given moment and we need to perform 3 different operations. Operations a, b need 1 doctor. c needs 2 doctor. 
+How does my research achieve this? In short: by not trusting solvers on their word alone. When they make a claim that a particular problem has no solution, we require them to "show their work", so to speak. More specifically, we require them to "prove" their claim by recording their reasoning in a proof. These proofs can be very large. Therefore, they are not checked by hand, instead this work is delegated to another program, called a "proof checker". 
 
-This is a common constraint, and one that I studied at length in my thesis: a cumulative constraint, which basically ensures that given some capacity, in this case 2 doctor, we never exceed that capacity at any timepoint. Here is a possible schedule, where the height represents the number of doctors needed.
+Such a proof checker is developed here at the TU Delft by my supervisor and two PhD students. My research goal was not just to directly contribute to this proof checker, but to also better understand some specific components and make it easier to extend it in the future.
 
-What is the optimization aspect? In this case that could be minimizing the total time. Here we're taking 5 units of time. Clearly, a better solution is the following schedule.
+~2 min
 
-# Challenge (slide 3)
+I achieved these goals in four main ways: 
+- Implementing support to check "the work" done by a solver for two common subproblems. We'll see an example of such a subproblem later.
+- Implementing support to check a solver combining knowledge it gathered from different subproblems
+~2 min
+- A methodology for extending the checker so that it can handle more subproblems in the future
+- A reusable component that is used throughout the checker and can be used also by future extensions. This component allows efficient reasoning over sets of integer (so -1, -5, 0, 1) values, like checking what the maximum and minimum is. 
 
-So what is now our main challenge? What's the problem that I'm helping to solve?
-- CP solvers are software. Decades of engineering, squeezing out performance, as well as a lot of complicated algorithms developed over many years, have made CP solvers very complex. However, writing complex code is hard and as a result solvers can make mistakes. 
-- The type of mistake _we_ are interested in is when a solver claims that a problem is optimality? Or equivalently, and that's what we will focus on, when a problem is impossible (or unsatisfiable)? 
-- Question for you, I hope the CS students here know the answer, why is this equivalent? Also, why is it harder than the case when a solver claims it has found a solution? Why is that case less interesting?
-<!-- skip: - Answer: we can just check whether solution satisfies all constraints. In our doctor example, just check we never exceed 2 doctors used -->
-- Okay, so we focus on claims that problems are unsatisfiable. How do we verify those claims? The main idea is this: make solvers record their reasoning, this record forms a proof
-- Then we check that proof the proof is valid
+Great, now that you have a high-level overview, let's dive deeper.
 
-todo? am i explaining research gap enough?
-todo? have i motivated enough why these mistakes are bad?
-<!-- todo? go over the step by step in diagram or separate slide -->
+At the start I said we are worried about when a solver incorrectly claims a problem has no solutions. But why are we not worried about the case when the solver returns a solution that is actually not a solution? Try to think about it and see if you can figure it out by the end of the presentation! I hope the CS students out there know the answer!
 
-# Build proof checker (slide 4)
+Next, let's look at the actual title of my thesis:
+"Proof Step Checking in a Constraint Programming Unsatisfiability Proof Checker".
 
-Okay, so we want to build a CP proof checker. Everything we've seen until now was already well-studied. The idea of building a proof checker is not mine. Furthermore, building such a checker is a large undertaking.Thankfully, I'm not doing it alone. My work is part of "the CP proof checker project"; led by my supervisor and two PhD'ers.
+Unsatisfiability is just another word for not having any solutions. So a problem that has no solutions is unsatisfiable. Proof checking: We're checking proofs of unsatisfiability claims, that all makes sense. But what's the "step" in proof step checking about, then? And what is Constraint Programming?
 
-What part am I doing? Well, remember that I mentioned that proofs consist of many different steps. Of course, most things consist of steps. The question is, what kind of steps? 
+Let's get into that, which will allow us to get to the heart of my contributions.
 
-Solvers perform many types of reasoning, many times. As they work, they build up a large database of facts about the problems. Each step in a proof refers to such a fact. The step can then be seen as a mini-claim, namely that this fact is true.
+~4
 
-If we remember the doctor example, an example of a fact would be this: scheduling operation c and a at time 0 is impossible. Why? Well, then we would need 3 doctors, which is forbidden by the cumulative constraint!
+Remember, proofs are a record of the "work" performed by a solver. For the solvers I'm looking at, which are, all Constraint Programming (CP) solvers -- more on that in a minute, this work involves learning progressively more things about the problems. This combined knowledge can then be used to show that a problem has no solution. Therefore, a proof that aims to show that a problem has no solution should contain exactly this knowledge. More specifically, proofs are a sequence of mini-claims: where each mini-claim is a statement that a particular piece of knowledge is true. Each step in a proof is then such a mini-claim!
 
-Proofs are then a huge sequence of mini-claims. All these mini-claims together should then imply the main claim: that the problem is unsatisfiable or optimal. 
+To clarify this, let's look at an example of a mini-claim:
+
+Remember the problem of finding a schedule for nurses and doctors? Imagine we have, in some time window in a hospital, 2 doctors available at a given moment and we need to perform 3 different operations. Operations for Alice and Bob need 1 doctor each. The operation for Carol needs 2 doctor. Next, operations for Bob and Carol take 2 hours, as opposed to Alice's operation needing only 1 hour. 
+
+Remember, we have only two doctors available. That means that at any given timepoint we can never use more doctors. This requirement, or "constraint", distinguishes valid schedules from invalid ones. This particular constraint, which has some set activities (the operations in our case) that make use of a resource (the doctors) with a fixed capacity (2), is known as cumulative. I studied it at length in my thesis, and it will come up again later.
+
+Okay, so based on this constraint, here is a possible schedule, where the height represents the numbers of doctors needed.
+
+<!-- We see that executing this schedule takes 5 units of time. But clearly at the end we are not using all doctors available. Well, what if we add the constraint that we only want to use 4 units of time?
+
+Then a possible schedule would look like this.
+
+Can we do better? No, whatever we do, we would use more than 2 doctors in that case. -->
+
+Now there are actually multiple mini-claims we could make based on this situation. Can anyone come up with a mini-claim?
+
+~6
+
+Example: Well, suppose that we know that Alice's operation is scheduled at t=0, and Bob's operation is scheduled at t=1, and Carol's operation is scheduled somewhere between t=0 and t=2. Then this would be impossible, because no matter where we place Carol's operation in between t=0 and t=2, it would violate the constraint!
+
+So what exactly is this mini-claim claiming? It claims that, given the particular possibility, the constraint is surely violated and hence that possiblity is ruled out!
+
+? todo improve!!!!!
 
 A proof checker then needs to do two things:
 - Check that every mini-claim is true
 - Check that all mini-claims being true imply the main claim
 
-As the "step" in my title indicates, I focused on checking mini-claims, so individual steps. This gives rise to the following research question:
+What I looked at in my thesis is only that first thing: checking all these individual mini-claims. 
 
-todo? this is not yet clear in the slides
+Before we move on, let's clarify one more thing: the Constraint Programming (or CP) in my thesis title. As we saw in the example, we can describe problems using general _constraints_. In this case it was operations, but it could also be jobs in a factory. The Constraint Programming paradigm describes problems using these constraints and then uses constraint-specific reasoning to solve them. It's been particularly succesful in scheduling problems, including the health care scheduling problem we have been considering.
+
+We're now ready to present my main research question and discuss my contributions in full detail.
+~8
 
 # Research question (slide 5)
 
 Research question: how can we develop (hidden: formally verified) proof checkers for individual proof steps in a CP unsatisfiability proof checker?
 
-As you can see, I've hidden a part of the research question. We'll get to that in a minute!
+Oops, you can see one part is still hidden! We'll get to that in a minute, but first, a more detailed overview of my contributions.
 
-# Main contributions (slide 6)
+# List contributions
 
-I will now list my main contributions.
+(start with previous overview, then expand each one with the full details, then make it a simple block)
 
-- I have implemented two constraint-specific checkers, which check mini-claims that involve specific constraints. One for cumulative and one for another constraint: alldifferent. Alldifferent is a constraint that requires a list of values to all be distinct; i.e., all different. 
+- I have implemented two constraint-specific checkers, which check mini-claims that involve specific constraints; these are the subproblems. One for cumulative and one for another constraint: alldifferent. Alldifferent is a constraint that requires a list of values to all be distinct
 
-- Of course, my research question was _how_  can we develop checkers for individual steps. So
+- Earlier, I mentioned a methodology that makes it easier to extend the checker. With extend I meant support for verifying mini-claims involving new constraints, other than alldifferent cumulative
 
-- I have also developed a methodology for developing new constraint-specific checkers. Since there are many different types of constraints, we want to add support for more of them. Future work can now use my methodology to make this easier.
-
-- Furthermore, I implemented a checker for a mini-claim that is known as a "deduction". As opposed to the constraint-specific claims, deduction mini-claims refer to previous mini-claims to support new mini-claims. So they combine them.
+- Furthermore, I implemented a checker for a mini-claim that is known as "deduction". As opposed to the constraint-specific claims, deduction mini-claims refer to previous mini-claims to support new mini-claims. So they combine them.
 
 ? todo: temporarily expand to show the details here
 
-- It turns out, these checkers share a lot of common logic. A big chunk of this logic is related to "domains". Remember our doctor/operation problem. 
+- It turns out, these checkers share a lot of common logic. A big chunk of this logic is related to dealing w/ "domains". A domain is a set of possible values. For example, if you remember our doctor/operation example fact, Carol's operation could either occur at t=0, or t=1 or t=2. So the domain in that case is the set [0, 1, 2]. To deal with these domains: I developed a specialized integer domain representation known as perforated intervals.
 
-To make these developments possible, we needed some building blocks. In these problems we have so-called variables: things that are not fixed and we want to find the value of. If you remember our doctor/operation problem, the starting time of each particular operation was the variable. In practice, we work only with _integer_ variables, so variables that are either -2, -1, 0, 1, 2, etc. Variables can have domains, which are sets of values the variable can take. Almost all the reasoning we do includes reasoning over these domains. For that reason, I developed a specialized integer domain representation known as perforated intervals. We will discuss them in more detail later.
-
-? todo: again, temporarily expand to show the details here
+~10 min
 
 - I also developed many other building blocks and code that can be reused in future developments, but due to lack of time I won't discuss them any further.
 
@@ -84,45 +101,90 @@ I used the word "implemented" quite a few times. But this implementation goes fu
 
 To understand this, let me tell you a bit more about writing code. When you develop software, it might work something like this:
 
-- You write a document describing what you want the software to do. Maybe this is not even written by the software engineer, but by a manager. This is usually quite informal. For example, it might not consider a lot of edge cases.
-- Then, you start implementing it. You actually write the problem.
-- Once that's done, you let the computer run the program. You then check whether the program actually behaved according to how you want it to behave. Often, you discover there are edge cases you didn't think, so you go back to implementing the program. You repeat this until you are confident it works.
+- You write a document describing what you want the software to do. 
+- Then, you actually implement the program.
+- Then, you let the computer run the program. You then check whether the program actually behaved according to how you want it to behave. Often, you discover there are edge cases you didn't think of, so you go back to implementing the program. You repeat this until you are confident it works.
 
 However, no matter how hard you try, in practice you never know if your program is fully correct. There might always be an edge case that you weren't able to test. Usually, it's impossible to test all possible inputs and outputs.
 
-Let's return to the problem at hand. As I said at the start, solvers are complex and make mistakes. We can't eliminate all those mistakes precisely because of what I just said.
+All this applies to writing solvers. Which is exactly why we developed a proof checker.
 
 ?todo: this is not yet in slide
 
-Okay, but wait a second. How do we know there's not similar mistakes in the proof checker? Well, first of all, the proof checker is simpler than the solver. Because the solver has already examined all the possibilities, the checker _knows_ where to look. It needs to simply follow the steps the solver recorded and see if by the end, indeed all the possibilities were eliminated. 
+Okay, but wait a second. How do we know there's not similar mistakes in the proof checker? 
 
-Unfortunately, that's not enough. Because while it's _simpler_, the checker is still not _simple_. In particular, implementation for the constraint-specific checkers I mentioned that I implemented, are only a little bit simpler than the corresponding constraint-specific logic in the solver. So we need to do better.
-
-The solution is "formal verification". When we do formal verification, that "design document" becomes what is called a "specification". Furthermore, it's not informal. Every desired behavior needs to be precisely described, using mathematical language. Programs are no longer bytes in a computer, they become mathematical objects. 
+That's because the proof checker is formally verified. When we do formal verification, that "design document" becomes what is called a "specification". Furthermore, it's not just some word document. Everything needs to be precisely described, using mathematical language. And with everything, I mean everything! A computer is a blank, it doesn't know everything. It needs to be taught the precise definition of a number, of addition. Programs are no longer bytes in a computer, they become mathematical objects. 
 
 Then, we write a proof, a mathematical proof, that our implementation satisfies the precise specification. Again, this proof needs to be very precise, hence the world "formal". 
 
 Alright, are we done now? After writing a proof, are we sure that there's no more mistakes? 
 
-Well, no. Because what if _my_ proof, the mathematical proof, is wrong? Well, we use another proof checker. But how do we know that _that_ proof checker, which, by the way, is known as Rocq, is correct? Well, that proof checker is even simpler! Simple enough that, because hundreds of humans use it and have looked at its code, we at some point trust that it is correct. Furthermore, Rocq is not just used by us, but by many projects all over the world, some that require an even greater degree of trust than we do.
+Well, no. Because what if _my_ proof, the mathematical proof, is wrong? Well, we use another proof checker. But how do we know that _that_ proof checker, which, by the way, is known as Rocq, is correct? Well, that proof checker is designed to be very simple. Simple enough that, because hundreds of humans use it and have looked at its code, we at some point trust that it is correct. Furthermore, Rocq is not just used by us, but by many projects all over the world, some that require an even greater degree of trust than we do.
+
+? objection to formally verifying the full solver?
+
+~3
 
 # Key contributions
 
-Alright, so now you have a full idea of what I've done, let's go over each of my contributions in more detail.
+Alright, so now you have a complete picture of what I've done, there's two contributions that I want to discuss in more depth.
+
+~13
 
 ## Checkers and methodology
 
-I will now highlight some important details of the two constraint-specific checkers I implemented.
+First, we're looking at my checker that verifies mini-claims about the cumulative constraint. 
 
-First of all, my cumulative checker. This was the most difficult of all the things I implemented, by far. I will use it as an example to explain my methodology.
+Remember the example I gave of a mini-claim? Let me write it in a more structured way:
 
-For that ...
+```
+CLAIM: the following domains lead to a violation
+- operation A starting time domain [0]
+- operation B starting time domain [1]
+- operation C starting time domain [0,1,2]
+```
+So Alice and Bob's are fixed to respectively 0 and 1. So schedule looks at least like THIS. Carol's could start at any of the listed times.
+
+Actually, every mini-claim can be written like that: so a claim that some combination of domains will lead to a constraint violation!
+
+My cumulative checker groups every claim it encounters into one of two categories and uses a different strategy for each. This is guided by my methodology, which can be summarized as: 
+1. find the different categories
+2. determine a separate strategy for each one. 
+
+Here, there are two categories. The earlier example is a so-called "operation conflict". I will now show you another one, called a "time conflict".
+
+```
+CLAIM: the following domains lead to a violation
+- operation A starting time domain [0]
+- operation C starting time domain [0]
+```
+
+Can you spot how they are different?
+
+Alright, in case 1, as the name suggests, we need to look from the perspective of a particular operation, in this case Carol's operation. This allows us to see that no matter where we put it, we'll cause a violation.
+
+In case 2, however, we need to look at a particular timepoint, where we will immediately see that there already is a violation.
+
+
+~2.5 min
 
 ## Perforated interval
 
-Let's now look at perforated intervals. Remember, they represent an integer domain, so a set of integers. They can represent any finite set of integers, and even some infinite ones.
+The last piece of the puzzle we will look at is the domain representation used throughout this thesis: perforated intervals. They are quite simple, but solve a lot of practical problems.
 
-They work 
+All they are are an interval, so a lower bound and upper bound, for example [0, 5], which is all the numbers [0, 1, 2, 3, 4, 5]; and a set of holes (or perforations, hence the name). So you could imagine the set [0, 1, 4, 6] would be represented by [1, 6] \ {2, 3, 5}. 
+
+Now, representing a domain like this has been done before, and is not new at all. What is new, is that my implementation is formally verified, and that I precisely described a condition in which case you can efficiently check the lower and upper bound of an interval.
+
+I've called this condition tightness. A perforated interval is tight when it doesn't have a hole at one of the bounds of the interval. For example, [1, 3] \ {1} is not tight. When a perforated interval isn't tight, we could use a simpler representation. In this case that would be just [1, 2].
+
+When a perforated interval is tight, you can just check its lower and upper bounds by inspecting the bounds of the interval. So for [1, 2] clearly the lower bound is 1 and upper bound is 2. But if we had [1, 3] \ {1}, we would have to think a bit before we could figure out the lower bound is 2!
+
+Again, I'm not claiming that nobody ever thought of this. However, it's never been described in any kind of detail.
+
+~2 min
+
+~start from 0
 
 # Discussion
 
@@ -133,6 +195,8 @@ First of all, I have demonstrated the feasibility of a formally verified CP unsa
 However, there are of course, some limitations. In particular, when we compare this approach of using the constraint-specific logic to verify solver reasoning to related work, we see that we have a much higher formal verification burden. Other approaches usually describe the constraint-specific reasoning done by the solver in terms of simpler reasoning. This means your checker is also simpler and there is less to formally verify. 
 
 Furthermore, my work did not contain an empirical validation. This was because the full checker, developed by others in the project, was not yet finished by the time I was nearly done. Therefore, no large problems could be tested. Thankfully, this situation has since improved and the results are very promising!
+
+~2 min
 
 # Future work
 
@@ -149,3 +213,8 @@ The simple methodology I proposed could be expanded, in particular by also inclu
 # Summary
 
 To summarize 
+
+~2 min
+
+
+With my contributions, I'm sure there's a bright future ahead for CP solvers, as they can fearlessly seek to improve their algorithms, without having to worry about being incorrect, since we will be able to catch that!
