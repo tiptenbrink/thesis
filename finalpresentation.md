@@ -43,7 +43,7 @@ If we remember the doctor example, an example of a fact would be this: schedulin
 
 Proofs are then a huge sequence of mini-claims. All these mini-claims together should then imply the main claim: that the problem is unsatisfiable or optimal. 
 
-A proof checker than needs to do two things:
+A proof checker then needs to do two things:
 - Check that every mini-claim is true
 - Check that all mini-claims being true imply the main claim
 
