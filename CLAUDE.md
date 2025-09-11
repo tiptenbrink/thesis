@@ -59,10 +59,6 @@ Uses Tailwind CSS v4 with custom presentation-specific font classes and TU Delft
 - Always use the presentation notes to guide how slides should look like, feel free to update them if a slide becomes to tall, because there is only limited vertical space. Always summarize instructions and update presentation notes with generalizable lessons.
 - Never use text-xl or similar for text size. Only use a limited set of global tailwind variables defined in app.css, so they can be changed if needed.
 
-### How to make changes
-
-First, make a todo list. Break down which slides must be edited. Try to work out the plan in more detail. Record this in `update.md`. You can always replace whatever was there previously. Then, execute the plan. Once you are done, compare what you have done with `update.md` and summarize your changes. Then, update `presentation-notes.md`, which is a complete overview of all design decisions and content for each slide, so that it is fully up to date. Furthermore, if there is anything in `finalpresentation.md` that is not clear in the presentation, mention that. 
-
 ### Typst diagrams
 
 You can add an entry to `compileTypst.ts` similar to `cumulFigure`. Then, add it at the end to `compileAll`. You can then run `node compileTypst.ts` to compile the new versions. They can then be imported as svg in a Svelte component like:

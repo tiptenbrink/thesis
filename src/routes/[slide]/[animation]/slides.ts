@@ -1,13 +1,26 @@
 import type { Component } from "svelte"
+import * as Opening from "$lib/client/slides/Opening.svelte";
+import * as Elevator from "$lib/client/slides/Elevator.svelte";
+import * as SolutionApproach from "$lib/client/slides/SolutionApproach.svelte";
 import * as Title from "$lib/client/slides/Title.svelte";
 import * as Motivation from "$lib/client/slides/Motivation.svelte";
 import * as Challenge from "$lib/client/slides/Challenge.svelte";
-import * as StepDetails from "$lib/client/slides/StepDetails.svelte";
+import * as TitleExplained from "$lib/client/slides/TitleExplained.svelte";
+import * as WhatAreProofs from "$lib/client/slides/WhatAreProofs.svelte";
+import * as MiniClaimExample from "$lib/client/slides/MiniClaimExample.svelte";
+import * as ProofCheckerTasks from "$lib/client/slides/ProofCheckerTasks.svelte";
+import * as ConstraintProgramming from "$lib/client/slides/ConstraintProgramming.svelte";
 import * as ResearchQuestion from "$lib/client/slides/ResearchQuestion.svelte";
+import * as ContributionsDetailed from "$lib/client/slides/ContributionsDetailed.svelte";
 import * as ContributionsOverview from "$lib/client/slides/ContributionsOverview.svelte";
 import * as FormalVerification1 from "$lib/client/slides/FormalVerification1.svelte";
 import * as FormalVerification2 from "$lib/client/slides/FormalVerification2.svelte";
+import * as CumulativeChecker from "$lib/client/slides/CumulativeChecker.svelte";
+import * as Discussion from "$lib/client/slides/Discussion.svelte";
+import * as FutureWorkDetailed from "$lib/client/slides/FutureWorkDetailed.svelte";
+import * as SummaryFinal from "$lib/client/slides/SummaryFinal.svelte";
 import * as PerforatedIntervals from "$lib/client/slides/PerforatedIntervals.svelte";
+import * as Tightness from "$lib/client/slides/Tightness.svelte";
 import * as ConstraintCheckers from "$lib/client/slides/ConstraintCheckers.svelte";
 import * as Achievements from "$lib/client/slides/Achievements.svelte";
 import * as FutureWork from "$lib/client/slides/FutureWork.svelte";
@@ -21,17 +34,34 @@ export interface SlideModule {
 }
 
 export const slides: SlideModule[] = [
-    Title,
-    Motivation,
-    Challenge,
-    StepDetails,
+    Opening,
+    Elevator,
+    SolutionApproach,
+    Achievements,
+    TitleExplained,
+    WhatAreProofs,
+    MiniClaimExample,
+    ProofCheckerTasks,
+    ConstraintProgramming,
     ResearchQuestion,
-    ContributionsOverview,
+    ContributionsDetailed,
     FormalVerification1,
     FormalVerification2,
-    ConstraintCheckers,
+    CumulativeChecker,
     PerforatedIntervals,
-    Achievements,
-    FutureWork,
-    Summary
+    Tightness,
+    Discussion,
+    FutureWorkDetailed,
+    SummaryFinal
+    // Motivation,
+    // Challenge,
+    // TitleExplained,
+    // ResearchQuestion,
+    // ContributionsOverview,
+    // FormalVerification1,
+    // FormalVerification2,
+    // ConstraintCheckers,
+    // PerforatedIntervals,
+    // FutureWork,
+    // Summary
   ]

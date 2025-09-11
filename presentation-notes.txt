@@ -26,6 +26,14 @@
 
 ## SLIDE STRUCTURE:
 
+### 0. Elevator Slide
+- Opening elevator pitch with 3 animated boxes (4 animations total)
+- Box 1: Context - "Computers are getting good" at nurse/doctor scheduling
+- Box 2: Problem - "Consequences if bad" - delayed treatments, understaffing risks
+- Box 3: Research - "My research" - tools to catch erroneous results
+- Uses TU Delft blue branding with clean white boxes and icons
+- No title, focuses purely on visual impact and key message
+
 ### 1. Title Slide
 - 6 animations highlighting key components: CP → Proof Checker → Unsatisfiability → Step
 - Uses TU Delft colors with gray highlighting backgrounds

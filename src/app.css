@@ -5,7 +5,7 @@
     
     /* Presentation Text Size System (6 sizes total) */
     --text-present-xs: 1vw;         /* Minimal details, footnotes */
-    --text-present-small: 1.5vw;    /* Supporting details, captions */
+    --text-present-small: 1.7vw;    /* Supporting details, captions */
     --text-present: 2vw;            /* Body text, standard content */
     --text-present-large: 2.5vw;    /* Section headers, important content */
     --text-present-xl: 3vw;         /* Slide titles, major headings */

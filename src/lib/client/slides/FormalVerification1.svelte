@@ -1,5 +1,5 @@
 <script module>
-  export const animations = 4
+  export const animations = 5
 </script>
 <script lang="ts">
   let props: { animation: number } = $props()
@@ -8,9 +8,9 @@
 <div class="h-full w-full p-6 flex flex-col justify-center">
   <div class="max-w-4xl mx-auto">
     <div class="space-y-6">
-      {#if props.animation >= 1}
+      {#if props.animation == 1}
         <div class="bg-geel-muted rounded-lg p-6 shadow-md">
-          <p class="text-present text-center font-medium">More than just <span class="bg-geel px-2 py-1 rounded font-bold">"implement"</span></p>
+          <p class="text-present text-center font-medium">More than just <span class="bg-geel px-2 py-1 rounded font-bold">implement</span></p>
         </div>
       {/if}
       
@@ -27,7 +27,7 @@
                 <div class="w-3 h-3 bg-slate-500 rounded-full"></div>
                 <div class="w-3 h-3 bg-slate-600 rounded-full"></div>
               </div>
-              <p class="text-present-small font-mono">Document → Code → Test → Repeat</p>
+              <p class="text-present-small font-mono">Design → Code → Test → Repeat</p>
             </div>
           </div>
         </div>
@@ -39,6 +39,18 @@
           <div class="relative bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-md">
             <p class="text-present text-center font-medium text-oranje">Problem: Never certain your program is fully correct</p>
           </div>
+        </div>
+      {/if}
+      
+      {#if props.animation >= 4}
+        <div class="text-center">
+          <p class="text-present">All this applies to writing solvers.</p>
+        </div>
+      {/if}
+      
+      {#if props.animation >= 5}
+        <div class="p-4 bg-koningsblauw text-white rounded-lg text-center">
+          <p class="text-present font-semibold">Which is exactly why we developed a proof checker!</p>
         </div>
       {/if}
     </div>

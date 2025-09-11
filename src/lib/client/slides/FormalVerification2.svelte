@@ -1,5 +1,5 @@
 <script module>
-  export const animations = 7
+  export const animations = 11
 </script>
 <script lang="ts">
   let props: { animation: number } = $props()
@@ -7,70 +7,65 @@
 
 <div class="h-full w-full p-6 flex flex-col justify-center">
   <div class="max-w-4xl mx-auto">
-    <h1 class="text-present-xl font-bold text-center mb-8 text-paars">But Wait...</h1>
     
     <div class="space-y-5">
-      {#if props.animation >= 1}
+      {#if props.animation >= 1 && props.animation < 5}
         <div class="bg-geel-muted rounded-lg p-6 shadow-md">
-          <p class="text-present text-center font-medium">How do we know the <em>proof checker</em> doesn't have similar mistakes?</p>
+          <p class="text-present text-center font-medium">How do we know there's not similar mistakes in the <em>proof checker</em>?</p>
         </div>
       {/if}
       
-      {#if props.animation >= 2}
-        <div class="flex justify-center">
-          <div class="bg-groen-muted rounded-lg p-3 shadow-md">
-            <p class="text-present-small">✓ Checker is simpler than solver</p>
-          </div>
+      {#if props.animation >= 2 && props.animation < 6}
+        <div class="bg-koningsblauw-muted rounded-lg p-6 shadow-md">
+          <p class="text-present text-center font-bold">The proof checker is "formally verified"</p>
         </div>
       {/if}
       
-      {#if props.animation >= 3}
-        <div class="flex justify-center">
-          <div class="bg-bordeaux-muted rounded-lg p-3 shadow-md">
-            <p class="text-present-small">✗ Still not simple enough</p>
-          </div>
+      {#if props.animation === 3}
+        <div class="p-6 bg-blue-50 rounded-lg">
+          <p class="text-present-large italic font-medium text-center">
+            How can we develop <span class="font-bold text-koningsblauw">formally verified</span> checkers for individual proof steps in a CP unsatisfiability proof checker?
+          </p>
+        </div>
+      {/if}
+      
+      {#if props.animation >= 4 && props.animation < 6}
+        <div class="p-4 bg-blue-50 rounded-lg">
+          <p class="text-present font-semibold">Formal verification:</p>
+          <p class="text-present-small mt-2">• Design document → mathematical "specification"</p>
+          <p class="text-present-small">• Everything precisely described in mathematical language</p>
+          <p class="text-present-small">• Programs become mathematical objects</p>
         </div>
       {/if}
       
       {#if props.animation >= 4}
-        <div class="bg-koningsblauw-muted rounded-lg p-6 shadow-md">
-          <p class="text-present text-center font-bold">Solution: Formal Verification</p>
+        <div class="text-center">
+          <p class="text-present">We write a mathematical proof that implementation satisfies specification</p>
         </div>
       {/if}
       
       {#if props.animation >= 5}
-        <div class="text-center">
-          <div class="inline-flex items-center space-x-3 bg-white/80 rounded-xl p-4 shadow-lg">
-            <div class="w-8 h-8 bg-rounded-full flex items-center justify-center">
-              <span class="font-bold text-sm">∀</span>
-            </div>
-            <p class="text-present-small">Mathematical specifications + formal proofs</p>
-          </div>
+        <div class="p-4 bg-yellow-50 rounded-lg text-center">
+          <p class="text-present font-semibold text-oranje">But what if my proof is wrong?</p>
         </div>
       {/if}
       
       {#if props.animation >= 6}
-        <div class="flex justify-center">
-          <div class="bg-donkergrijs-muted rounded-lg p-4 shadow-md">
-            <div class="flex items-center space-x-3">
-              <div class="flex items-center space-x-2">
-                <div class="w-6 h-6 bg-koningsblauw rounded-full flex items-center justify-center">
-                  <span class="text-white text-xs font-bold">Us</span>
-                </div>
-                <span class="text-donkerblauw">→</span>
-                <div class="w-6 h-6 bg-groen rounded-full flex items-center justify-center">
-                  <span class="text-white text-xs font-bold">Rocq</span>
-                </div>
-                <span class="text-donkerblauw">→</span>
-                <div class="w-6 h-6 bg-oranje rounded-full flex items-center justify-center">
-                  <span class="text-white text-xs font-bold">👥</span>
-                </div>
-              </div>
-              <p class="text-present-small">Chain of trust</p>
-            </div>
-          </div>
+        <div class="text-center">
+          <p class="text-present">We use another proof checker: <strong>Rocq</strong></p>
         </div>
       {/if}
+      
+      {#if props.animation >= 7}
+        <div class="p-4 bg-bosgroen text-white rounded-lg">
+          <p class="text-present font-semibold">Why trust Rocq?</p>
+          <p class="text-present-small mt-2 {props.animation >= 8 ? '' : 'invisible'}">• Designed to be very simple</p>
+          <p class="text-present-small {props.animation >= 9 ? '' : 'invisible'}">• Hundreds of humans use it and have reviewed it</p>
+          <p class="text-present-small {props.animation >= 10 ? '' : 'invisible'}">• Used by many projects worldwide requiring high trust</p>
+        </div>
+      {/if}
+      
+     
     </div>
   </div>
 </div>

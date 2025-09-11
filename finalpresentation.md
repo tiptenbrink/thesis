@@ -113,7 +113,7 @@ All this applies to writing solvers. Which is exactly why we developed a proof c
 
 Okay, but wait a second. How do we know there's not similar mistakes in the proof checker? 
 
-That's because the proof checker is formally verified. When we do formal verification, that "design document" becomes what is called a "specification". Furthermore, it's not just some word document. Everything needs to be precisely described, using mathematical language. And with everything, I mean everything! A computer is a blank, it doesn't know everything. It needs to be taught the precise definition of a number, of addition. Programs are no longer bytes in a computer, they become mathematical objects. 
+That's because the proof checker is what we call "formally verified". When we do formal verification, that "design document" becomes what is called a "specification". Furthermore, it's not just some word document. Everything needs to be precisely described, using mathematical language. And with everything, I mean everything! A computer is a blank, it doesn't know everything. It needs to be taught the precise definition of a number, of addition. Programs are no longer bytes in a computer, they become mathematical objects. 
 
 Then, we write a proof, a mathematical proof, that our implementation satisfies the precise specification. Again, this proof needs to be very precise, hence the world "formal". 
 
@@ -194,7 +194,7 @@ First of all, I have demonstrated the feasibility of a formally verified CP unsa
 
 However, there are of course, some limitations. In particular, when we compare this approach of using the constraint-specific logic to verify solver reasoning to related work, we see that we have a much higher formal verification burden. Other approaches usually describe the constraint-specific reasoning done by the solver in terms of simpler reasoning. This means your checker is also simpler and there is less to formally verify. 
 
-Furthermore, my work did not contain an empirical validation. This was because the full checker, developed by others in the project, was not yet finished by the time I was nearly done. Therefore, no large problems could be tested. Thankfully, this situation has since improved and the results are very promising!
+Futhermore, my methodology does not provide any guidance on how to do formal verification.
 
 ~2 min
 
@@ -207,8 +207,6 @@ First of all, once the full checker is finished, we can empirically test proofs 
 Next, there are many possible optimizations possible in my checker implementations. I implemented the simplest possible logic for reasoning over cumulative constraints, but algorithms used in solvers use a number of tricks to increase performance. These could also be applied to my checker.
 
 Solvers could record so-called "hints", additional information that could speed up checkers and simplify them further. 
-
-The simple methodology I proposed could be expanded, in particular by also including methods to help the formal verification part, since that is currently the biggest difficulty.
 
 # Summary
 
