@@ -15,7 +15,7 @@
       <div class="p-4 bg-yellow-50 rounded-lg">
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <p class="text-present-small font-semibold">Mini-claim: domains lead to violation</p>
+            <p class="text-present-small font-semibold">Subclaim: domains lead to violation</p>
             <p class="text-present-small">• Operation A starting time domain {'{'}0{'}'}</p>
             <p class="text-present-small">• Operation B starting time domain {'{'}1{'}'}</p>
             <p class="text-present-small">• Operation C starting time domain {'{'}0,1,2{'}'}</p>
@@ -33,7 +33,7 @@
     
     {#if props.animation >= 2 && props.animation < 4}
       <div class="text-center">
-        <p class="text-present-large">Every mini-claim: domains → conflict</p>
+        <p class="text-present-large">Every subclaim: domains → conflict</p>
       </div>
     {/if}
     
@@ -49,7 +49,7 @@
       <div class="p-4 bg-red-50 rounded-lg">
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <p class="text-present-small font-semibold text-bordeaux">Mini-claim: domains lead to violation</p>
+            <p class="text-present-small font-semibold text-bordeaux">Subclaim: domains lead to violation</p>
             <p class="text-present-small">• Operation A starting time domain {'{'}0{'}'}</p>
             <p class="text-present-small">• Operation C starting time domain {'{'}0{'}'}</p>
             <div class="mt-3 bg-bordeaux-light rounded-lg text-center {props.animation >= 6 ? '' : 'invisible'}">

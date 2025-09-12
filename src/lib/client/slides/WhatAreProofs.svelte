@@ -23,15 +23,15 @@
     
     {#if props.animation >= 3}
       <div class="p-4 bg-koningsblauw-muted rounded-lg text-center">
-        <p class="text-present font-semibold">Proof = sequence of mini-claims</p>
-        <p class="text-present-small mt-2">Mini-claim about knowledge being true</p>
-        <p class="text-present-small mt-2">Each step is a mini-claim</p>
+        <p class="text-present font-semibold">Proof = sequence of subclaims</p>
+        <p class="text-present-small mt-2">Subclaim about knowledge being true</p>
+        <p class="text-present-small mt-2">Each step is a subclaim</p>
       </div>
     {/if}
     
     {#if props.animation >= 4}
       <div class="text-center">
-        <p class="text-present">Mini-claim: statement that particular knowledge is true</p>
+        <p class="text-present">Subclaim: statement that particular knowledge is true</p>
       </div>
     {/if}
   </div>

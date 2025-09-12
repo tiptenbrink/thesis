@@ -13,9 +13,9 @@
       <div class="p-4 bg-koningsblauw-muted rounded-lg">
         <p class="text-present-large font-semibold mb-3">A proof checker needs to do two things:</p>
         <div class="space-y-3">
-          <p class="text-present {props.animation >= 3 ? 'bg-geel-muted p-2 rounded' : ''}">• Check that every mini-claim is true</p>
+          <p class="text-present {props.animation >= 3 ? 'bg-geel-muted p-2 rounded' : ''}">• Check that every subclaim is true</p>
           {#if props.animation >= 2}
-            <p class="text-present">• Check that all mini-claims being true imply the main claim</p>
+            <p class="text-present">• Check that all subclaims being true imply the main claim</p>
           {/if}
         </div>
       </div>

@@ -82,13 +82,13 @@ This combined knowledge can then be used to show that a problem has no solution.
 
 Therefore, a proof that aims to show that a problem has no solution should contain exactly this knowledge. 
 
-More specifically, proofs are a sequence of mini-claims: where each mini-claim is a statement that a particular piece of knowledge is true. Each step in a proof is then such a mini-claim!
+More specifically, proofs are a sequence of subclaims: where each subclaim is a statement that a particular piece of knowledge is true. Each step in a proof is then such a subclaim!
 
 
 
-###### mini-claim example
+###### subclaim example
 
-To clarify this, let's look at an example of a mini-claim:
+To clarify this, let's look at an example of a subclaim:
 
 Remember the problem of finding a schedule for nurses and doctors? Imagine we have, in some time window in a hospital, 2 doctors available at a given moment and we need to perform 3 different operations. Operations for Alice and Bob need 1 doctor each. The operation for Carol needs 2 doctor. Next, operations for Bob and Carol take 2 hours, as opposed to Alice's operation needing only 1 hour.
 
@@ -99,22 +99,22 @@ Okay, so based on this constraint, here is a possible schedule, where the height
 Then a possible schedule would look like this.
 
 
-Now there are actually multiple mini-claims we could make based on this situation. Can anyone come up with a mini-claim?
+Now there are actually multiple subclaims we could make based on this situation. Can anyone come up with a subclaim?
 
 ~6
 
 Example: Well, suppose that we know that Alice's operation is scheduled at t=0, and Bob's operation is scheduled at t=1, and Carol's operation is scheduled somewhere between t=0 and t=2. Then this would be impossible, because no matter where we place Carol's operation in between t=0 and t=2, it would violate the constraint!
 
-So what exactly is this mini-claim claiming? It claims that, given the particular possibility, the constraint is surely violated and hence that possiblity is ruled out!
+So what exactly is this subclaim claiming? It claims that, given the particular possibility, the constraint is surely violated and hence that possiblity is ruled out!
 
 ? todo improve!!!!!
 
 A proof checker then needs to do two things:
 
-* Check that every mini-claim is true
-* Check that all mini-claims being true imply the main claim
+* Check that every subclaim is true
+* Check that all subclaims being true imply the main claim
 
-What I looked at in my thesis is only that first thing: checking all these individual mini-claims.
+What I looked at in my thesis is only that first thing: checking all these individual subclaims.
 
 Before we move on, let's clarify one more thing: the Constraint Programming (or CP) in my thesis title. As we saw in the example, we can describe problems using general *constraints*. In this case it was operations, but it could also be jobs in a factory. The Constraint Programming paradigm describes problems using these constraints and then uses constraint-specific reasoning to solve them. It's been particularly succesful in scheduling problems, including the health care scheduling problem we have been considering.
 
@@ -131,9 +131,9 @@ Oops, you can see one part is still hidden! We'll get to that in a minute, but f
 
 (start with previous overview, then expand each one with the full details, then make it a simple block)
 
-* I have implemented two constraint-specific checkers, which check mini-claims that involve specific constraints; these are the subproblems. One for cumulative and one for another constraint: alldifferent. Alldifferent is a constraint that requires a list of values to all be distinct
-* Earlier, I mentioned a methodology that makes it easier to extend the checker. With extend I meant support for verifying mini-claims involving new constraints, other than alldifferent cumulative
-* Furthermore, I implemented a checker for a mini-claim that is known as "deduction". As opposed to the constraint-specific claims, deduction mini-claims refer to previous mini-claims to support new mini-claims. So they combine them.
+* I have implemented two constraint-specific checkers, which check subclaims that involve specific constraints; these are the subproblems. One for cumulative and one for another constraint: alldifferent. Alldifferent is a constraint that requires a list of values to all be distinct
+* Earlier, I mentioned a methodology that makes it easier to extend the checker. With extend I meant support for verifying subclaims involving new constraints, other than alldifferent cumulative
+* Furthermore, I implemented a checker for a subclaim that is known as "deduction". As opposed to the constraint-specific claims, deduction subclaims refer to previous subclaims to support new subclaims. So they combine them.
 
 ? todo: temporarily expand to show the details here
 
@@ -180,9 +180,9 @@ Alright, so now you have a complete picture of what I've done, there's two contr
 
 ## Checkers and methodology
 
-First, we're looking at my checker that verifies mini-claims about the cumulative constraint.
+First, we're looking at my checker that verifies subclaims about the cumulative constraint.
 
-Remember the example I gave of a mini-claim? Let me write it in a more structured way:
+Remember the example I gave of a subclaim? Let me write it in a more structured way:
 
 ```
 CLAIM: the following domains lead to a violation
@@ -193,7 +193,7 @@ CLAIM: the following domains lead to a violation
 
 So Alice and Bob's are fixed to respectively 0 and 1. So schedule looks at least like THIS. Carol's could start at any of the listed times.
 
-Actually, every mini-claim can be written like that: so a claim that some combination of domains will lead to a constraint violation!
+Actually, every subclaim can be written like that: so a claim that some combination of domains will lead to a constraint violation!
 
 My cumulative checker groups every claim it encounters into one of two categories and uses a different strategy for each. This is guided by my methodology, which can be summarized as:
 

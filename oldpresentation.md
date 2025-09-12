@@ -37,17 +37,17 @@ Okay, so we want to build a CP proof checker. Everything we've seen until now wa
 
 What part am I doing? Well, remember that I mentioned that proofs consist of many different steps. Of course, most things consist of steps. The question is, what kind of steps? 
 
-Solvers perform many types of reasoning, many times. As they work, they build up a large database of facts about the problems. Each step in a proof refers to such a fact. The step can then be seen as a mini-claim, namely that this fact is true.
+Solvers perform many types of reasoning, many times. As they work, they build up a large database of facts about the problems. Each step in a proof refers to such a fact. The step can then be seen as a subclaim, namely that this fact is true.
 
 If we remember the doctor example, an example of a fact would be this: scheduling operation c and a at time 0 is impossible. Why? Well, then we would need 3 doctors, which is forbidden by the cumulative constraint!
 
-Proofs are then a huge sequence of mini-claims. All these mini-claims together should then imply the main claim: that the problem is unsatisfiable or optimal. 
+Proofs are then a huge sequence of subclaims. All these subclaims together should then imply the main claim: that the problem is unsatisfiable or optimal. 
 
 A proof checker then needs to do two things:
-- Check that every mini-claim is true
-- Check that all mini-claims being true imply the main claim
+- Check that every subclaim is true
+- Check that all subclaims being true imply the main claim
 
-As the "step" in my title indicates, I focused on checking mini-claims, so individual steps. This gives rise to the following research question:
+As the "step" in my title indicates, I focused on checking subclaims, so individual steps. This gives rise to the following research question:
 
 todo? this is not yet clear in the slides
 
@@ -61,13 +61,13 @@ As you can see, I've hidden a part of the research question. We'll get to that i
 
 I will now list my main contributions.
 
-- I have implemented two constraint-specific checkers, which check mini-claims that involve specific constraints. One for cumulative and one for another constraint: alldifferent. Alldifferent is a constraint that requires a list of values to all be distinct; i.e., all different. 
+- I have implemented two constraint-specific checkers, which check subclaims that involve specific constraints. One for cumulative and one for another constraint: alldifferent. Alldifferent is a constraint that requires a list of values to all be distinct; i.e., all different. 
 
 - Of course, my research question was _how_  can we develop checkers for individual steps. So
 
 - I have also developed a methodology for developing new constraint-specific checkers. Since there are many different types of constraints, we want to add support for more of them. Future work can now use my methodology to make this easier.
 
-- Furthermore, I implemented a checker for a mini-claim that is known as a "deduction". As opposed to the constraint-specific claims, deduction mini-claims refer to previous mini-claims to support new mini-claims. So they combine them.
+- Furthermore, I implemented a checker for a subclaim that is known as a "deduction". As opposed to the constraint-specific claims, deduction subclaims refer to previous subclaims to support new subclaims. So they combine them.
 
 ? todo: temporarily expand to show the details here
 

@@ -14,16 +14,16 @@
     <!-- Three pillars - more compact -->
     <div class="grid grid-cols-3 gap-4 mb-4">
       <div class="p-3 bg-purple-100 rounded-lg text-center">
-        <p class="text-present font-bold text-paars">Building block</p>
-        <p class="text-present-small text-donkergrijs-muted mt-1">Perforated intervals</p>
+        <p class="text-present font-bold text-paars">Extensibility+Theory</p>
+        <p class="text-present-small text-donkergrijs-muted mt-1">Perforated intervals, methodology</p>
       </div>
       <div class="p-3 bg-green-100 rounded-lg text-center">
         <p class="text-present font-bold text-bosgroen">Implementation</p>
-        <p class="text-present-small text-donkergrijs-muted mt-1">2 constraints+deduction</p>
+        <p class="text-present-small text-donkergrijs-muted mt-1">Miniclaim checkers for 2 constraints+deduction</p>
       </div>
       <div class="p-3 bg-blue-100 rounded-lg text-center">
         <p class="text-present font-bold text-koningsblauw">Formal verification</p>
-        <p class="text-present-small text-donkergrijs-muted mt-1">Rocq</p>
+        <p class="text-present-small text-donkergrijs-muted mt-1">Mathematical correctness proofs with Rocq</p>
       </div>
     </div>
   {/if}

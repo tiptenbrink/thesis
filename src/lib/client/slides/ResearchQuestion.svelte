@@ -17,7 +17,7 @@
       {#if props.animation >= 1}
         <div class="text-center text-present">
           <span class="inline-block px-4 py-2 bg-oranje-light rounded-lg font-medium">
-            Step checker = mini-claim checker
+            Step checker = subclaim checker
           </span>
         </div>
       {/if}

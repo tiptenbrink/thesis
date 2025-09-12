@@ -19,12 +19,12 @@
           <p class="text-present mt-1">Two common subproblems</p>
         {:else if props.animation === 2}
           <!-- Expanded with details -->
-          <p class="text-present font-bold text-koningsblauw">Check constraint-specific mini-claims</p>
+          <p class="text-present font-bold text-koningsblauw">Check constraint-specific subclaims</p>
           <p class="text-present-small mt-1">• <strong>Cumulative:</strong> activities using limited capacity</p>
           <p class="text-present-small">• <strong>Alldifferent:</strong> all values distinct</p>
         {:else}
           <!-- Final compact form -->
-          <p class="text-present font-bold text-koningsblauw">Two constraint mini-claim checkers</p>
+          <p class="text-present font-bold text-koningsblauw">Two constraint subclaim checkers</p>
           <p class="text-present mt-1">Cumulative + Alldifferent</p>
         {/if}
       </div>
@@ -40,7 +40,7 @@
         {:else if props.animation === 4}
           <!-- Expanded with details -->
           <p class="text-present font-bold text-bordeaux">Constraint checker methodology</p>
-          <p class="text-present-small mt-1">Support new constraint-specific mini-claim checkers beyond cumulative and alldifferent</p>
+          <p class="text-present-small mt-1">Support new constraint-specific subclaim checkers beyond cumulative and alldifferent</p>
         {:else}
           <!-- Final compact form -->
           <p class="text-present font-bold text-bordeaux">Constraint checker methodology</p>
@@ -59,7 +59,7 @@
         {:else if props.animation === 6}
           <!-- Expanded with details -->
           <p class="text-present font-bold text-paars">Deduction checker</p>
-          <p class="text-present-small mt-1">Refers to previous mini-claims to support new mini-claims</p>
+          <p class="text-present-small mt-1">Refers to previous subclaims to support new subclaims</p>
         {:else}
           <!-- Final compact form -->
           <p class="text-present font-bold text-paars">Deduction checker</p>

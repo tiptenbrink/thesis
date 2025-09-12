@@ -12,7 +12,7 @@
 </script>
 
 <div class="h-full w-full p-6 flex flex-col justify-center">
-  <h1 class="text-present-xl font-bold text-center mb-4">Mini-claim example</h1>
+  <h1 class="text-present-xl font-bold text-center mb-4">Subclaim example</h1>
   
   <div class="space-y-4">
     {#if props.animation >= 1}
@@ -44,7 +44,7 @@
           <p class="text-present-small">Alice at t=0, Bob at t=1, Carol between t=0 and t=2</p>
         </div>
         <div class={"p-4 bg-bordeaux text-white rounded-lg text-center " + (props.animation >= 10 ? '' : 'invisible')}>
-          <p class="text-present font-semibold">Mini-claim:</p>
+          <p class="text-present font-semibold">Subclaim:</p>
           <p class="text-present-small mt-2">This scenario violates constraint</p>
           <p class="text-present-small">Useful: possibility is eliminated</p>
         </div>
