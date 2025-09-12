@@ -18,7 +18,7 @@
         {/if}
         {#if props.animation >= 3}
 
-        <p class="text-present font-semibold">Advanced understanding of miniclaim checkers</p>
+        <p class="text-present font-semibold">Advanced understanding of subclaim checkers</p>
         {/if}
         {#if props.animation >= 4}
 
