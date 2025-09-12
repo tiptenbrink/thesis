@@ -19,7 +19,7 @@
       </div>
       <div class="p-3 bg-green-100 rounded-lg text-center">
         <p class="text-present font-bold text-bosgroen">Implementation</p>
-        <p class="text-present-small text-donkergrijs-muted mt-1">Miniclaim checkers for 2 constraints+deduction</p>
+        <p class="text-present-small text-donkergrijs-muted mt-1">Subclaim checkers for 2 constraints+deduction</p>
       </div>
       <div class="p-3 bg-blue-100 rounded-lg text-center">
         <p class="text-present font-bold text-koningsblauw">Formal verification</p>
