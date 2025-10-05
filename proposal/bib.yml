@@ -1,0 +1,311 @@
+flippo2024proof:
+    type: Article
+    author:
+      - Flippo, Maarten
+      - Sidorov, Konstantin
+      - Marijnissen, Imko
+      - Smits, Jeff
+      - Demirović, Emir
+    title: A Multi-Stage Proof Logging Framework to Certify the Correctness of CP Solvers
+    date: 2024-08-29
+    page-range: 11:1-11:20
+    serial-number:
+        doi: "10.4230/LIPIcs.CP.2024.11"
+        
+    parent:
+        - type: Proceedings
+          title: 30th International Conference on Principles and Practice of Constraint Programming (CP 2024)
+          volume: 307
+          editor: ["Shaw, Paul"]
+          # series =	{Leibniz International Proceedings in Informatics (LIPIcs)},
+          publisher: Schloss Dagstuhl - Leibniz-Zentrum für Informatik
+            # name: Schloss Dagstuhl - Leibniz-Zentrum für Informatik
+            # location: Dagstuhl, Germany
+            
+gange1certifying:
+  type: article
+  title: Certifying optimality in constraint programming, February 2019
+  author:
+  - Gange, G
+  - Stuckey, PJ
+  parent:
+    type: periodical
+    title: Presentation at KTH Royal Institute of Technology. Slides https://www. kth. se/polopoly fs/1.879851
+    volume: 1550484700
+    
+gocht2022certifying:
+  type: article
+  title: 'Certifying correctness for combinatorial algorithms: by using pseudo-Boolean reasoning'
+  author: Gocht, Stephan
+  date: 2022
+  parent:
+    type: periodical
+
+apt2003principles:
+  type: book
+  title: Principles of Constraint Programming
+  author: Apt, Krzysztof
+  date: 2003
+  publisher: Cambridge University Press
+
+baptiste2001constraint:
+  type: book
+  title: 'Constraint-based scheduling: applying constraint programming to scheduling problems'
+  author:
+  - Baptiste, Philippe
+  - Le Pape, Claude
+  - Nuijten, Wim
+  date: 2001
+  publisher: Springer Science & Business Media
+  volume: 39
+
+stallman1977forward:
+  type: article
+  title: Forward reasoning and dependency-directed backtracking in a system for computer-aided circuit analysis
+  author:
+  - Stallman, Richard M
+  - Sussman, Gerald J
+  date: 1977
+  page-range: 135-196
+  parent:
+    type: periodical
+    title: Artificial intelligence
+    publisher: Elsevier
+    issue: 2
+    volume: 9
+
+wallace1996practical:
+  type: article
+  title: Practical applications of constraint programming
+  author: Wallace, Mark
+  date: 1996
+  page-range: 139-168
+  parent:
+    type: periodical
+    title: Constraints
+    publisher: Springer
+    volume: 1
+
+rossi2006handbook:
+  type: book
+  title: Handbook of Constraint Programming
+  author:
+  - Rossi, F.
+  - name: Beek
+    given-name: P.
+    prefix: van
+  - Walsh, T.
+  date: 2006
+  publisher: Elsevier Science
+  serial-number:
+    isbn: '9780080463803'
+  parent:
+    type: book
+    title: Foundations of Artificial Intelligence
+
+schutt2011improving:
+  type: thesis
+  title: Improving scheduling by learning
+  author: Schutt, Andreas
+  date: 2011
+  publisher: University of Melbourne, Department of Computer Science, Software Engineering
+
+biere2021handbook:
+  type: book
+  title: 'Handbook of Satisfiability: Second Edition'
+  author:
+  - Biere, A.
+  - Heule, M.
+  - name: Maaren
+    given-name: H.
+    prefix: van
+  date: 2021
+  publisher: IOS Press
+  # url: https://books.google.nl/books?id=dUAvEAAAQBAJ
+  serial-number:
+    isbn: '9781643681610'
+  parent:
+    type: book
+    title: Frontiers in Artificial Intelligence and Applications
+
+nethercote2007minizinc:
+  type: article
+  title: 'MiniZinc: Towards a standard CP modelling language'
+  author:
+  - Nethercote, Nicholas
+  - Stuckey, Peter J
+  - Becket, Ralph
+  - Brand, Sebastian
+  - Duck, Gregory J
+  - Tack, Guido
+  date: 2007
+  page-range: 529-543
+  serial-number:
+    doi: "10.1007/978-3-540-74970-7_38"
+  parent:
+    type: proceedings
+    title: International Conference on Principles and Practice of Constraint Programming
+    organization: Springer
+
+minizinc_cumulative_2024:
+  type: web
+  title: '{Cumulative - MiniZinc Library Reference v2.8.7}'
+  author: MiniZinc Team
+  url: 
+    value: https://docs.minizinc.dev/en/2.8.7/lib-globals-scheduling.html#cumulative
+    date: 2024-11-28
+  note: 'Accessed: 2024-11-28'
+
+joshi2015totalizer:
+  type: article
+  title: Generalized Totalizer Encoding for Pseudo-Boolean Constraints
+  author:
+  - Joshi, Saurabh
+  - Martins, Ruben
+  - Manquinho, Vasco
+  date: 2015
+  page-range: 200-209
+  serial-number:
+    doi: 10.1007/978-3-319-23219-5_15
+  parent:
+    type: proceedings
+    editor: Pesant, Gilles
+    title: Principles and Practice of Constraint Programming
+    publisher:
+      name: Springer International Publishing
+      location: Cham
+
+skotaam2022creusat:
+  type: thesis
+  title: "CreuSAT: Using Rust and Creusot to create the world's fastest deductively verified SAT solver"
+  author: Skotåm, Sarek Høverstad
+  date: 2022
+
+denis2023creusot:
+  type: thesis
+  title: "Deductive Verification of Rust Programs"
+  author: Denis, Xavier
+  date: 2023-12
+  organization: Université Paris-Saclay
+  url: https://theses.hal.science/tel-04517581
+
+fleury2018verified:
+  type: article
+  title: A verified SAT solver with watched literals using imperative HOL
+  author:
+  - Fleury, Mathias
+  - Blanchette, Jasmin Christian
+  - Lammich, Peter
+  date: 2018
+  page-range: 158-171
+  serial-number:
+    doi: 10.1145/3167080
+  parent:
+    type: proceedings
+    title: Proceedings of the 7th ACM SIGPLAN International Conference on Certified Programs and Proofs
+
+bobot2011why3:
+  type: article
+  title: 'Why3: Shepherd your herd of provers'
+  author:
+  - Bobot, François
+  - Filliâtre, Jean-Christophe
+  - Marché, Claude
+  - Paskevich, Andrei
+  date: 2011
+  page-range: 53-64
+  parent:
+    type: proceedings
+    title: 'Boogie 2011: First International Workshop on Intermediate Verification Languages'
+
+mackworth1977consistency:
+  type: article
+  title: Consistency in networks of relations
+  author: Mackworth, Alan K
+  date: 1977
+  page-range: 99-118
+  parent:
+    type: periodical
+    title: Artificial intelligence
+    publisher: Elsevier
+    issue: 1
+    volume: 8
+
+ho2022aeneas:
+  type: article
+  title: 'Aeneas: Rust verification by functional translation'
+  author:
+  - Ho, Son
+  - Protzenko, Jonathan
+  date: 2022-08
+  page-range: 711-741
+  url: http://dx.doi.org/10.1145/3547647
+  serial-number:
+    doi: 10.1145/3547647
+    issn: 2475-1421
+  parent:
+    type: periodical
+    title: Proceedings of the ACM on Programming Languages
+    publisher: Association for Computing Machinery (ACM)
+    issue: ICFP
+    volume: 6
+
+astrauskas2019prusti:
+  type: article
+  title: Leveraging {R}ust Types for Modular Specification and Verification
+  author:
+  - Astrauskas, V.
+  - Müller, P.
+  - Poli, F.
+  - Summers, A. J.
+  date: 2019
+  page-range: 1-30
+  url: https://www.youtube.com/watch?v=lfc08mntlB0
+  serial-number:
+    doi: 10.1145/3360573
+  parent:
+    type: proceedings
+    title: Object-Oriented Programming Systems, Languages, and Applications (OOPSLA)
+    publisher: ACM
+    issue: OOPSLA
+    volume: 3
+
+muller2016viper:
+  type: article
+  title: 'Viper: A verification infrastructure for permission-based reasoning'
+  author:
+  - Müller, Peter
+  - Schwerhoff, Malte
+  - Summers, Alexander J
+  date: 2016
+  page-range: 41-62
+  serial-number:
+    doi: 10.1007/978-3-662-49122-5_2
+  parent:
+    type: proceedings
+    title: 'Verification, Model Checking, and Abstract Interpretation: 17th International Conference, VMCAI 2016, St. Petersburg, FL, USA, January 17-19, 2016. Proceedings 17'
+    organization: Springer
+
+lattuada2023verus:
+  type: article
+  title: 'Verus: Verifying rust programs using linear ghost types'
+  author:
+  - Lattuada, Andrea
+  - Hance, Travis
+  - Cho, Chanhee
+  - Brun, Matthias
+  - Subasinghe, Isitha
+  - Zhou, Yi
+  - Howell, Jon
+  - Parno, Bryan
+  - Hawblitzel, Chris
+  serial-number:
+    doi: 10.1145/3586037
+  date: 2023
+  page-range: 286-315
+  parent:
+    type: periodical
+    title: Proceedings of the ACM on Programming Languages
+    publisher: ACM New York, NY, USA
+    issue: OOPSLA1
+    volume: 7

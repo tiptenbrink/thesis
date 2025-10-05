@@ -1,0 +1,43 @@
+name: Send Request to Typst Server
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  send-typst-request:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Get current long SHA of main branch
+        id: get_sha
+        run: |
+          CURRENT_SHA=$(git rev-parse main)
+          echo "CURRENT_SHA=$CURRENT_SHA" >> $GITHUB_ENV
+      - name: Send request to Typst and Proposal servers
+        env:
+          TYPST_SERVE_KEY: ${{ secrets.TRUST_KEY }}
+          TYPST_SERVE_SHA: ${{ env.CURRENT_SHA }}
+        run: |
+          OVERALL_SUCCESS=0
+
+          for URL in https://thesis.tipten.nl/main https://proposal.tipten.nl/main; do
+            RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X GET $URL \
+              -H "typst-serve-pattern-value: $TYPST_SERVE_SHA" \
+              -H "typst-serve-key: $TYPST_SERVE_KEY")
+
+            echo "Response Code from $URL: $RESPONSE_CODE"
+
+            if [ "$RESPONSE_CODE" -ne 200 ]; then
+              echo "Request to $URL failed with response code $RESPONSE_CODE" >&2
+              OVERALL_SUCCESS=1
+            fi
+          done
+
+          if [ $OVERALL_SUCCESS -ne 0 ]; then
+            exit 1
+          fi

@@ -1,0 +1,10 @@
+copy_*
+*.coq.d
+*.glob
+*.vo
+*.vok
+*.vos
+Makefile.coq
+Makefile.coq.conf
+*.aux
+*.lia.cache

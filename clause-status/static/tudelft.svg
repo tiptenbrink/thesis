@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   version="1.1"
+   id="svg2"
+   width="1058.2677"
+   height="auto"
+   viewBox="0 0 1058.2677 595.27557"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs6">
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath16">
+      <path
+         d="M 0,0.028 H 793.672 V 446.456 H 0 Z"
+         clip-rule="evenodd"
+         id="path14" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath28">
+      <path
+         d="M 0,0 H 793.7 V 446.456 H 0 Z"
+         clip-rule="evenodd"
+         id="path26" />
+    </clipPath>
+  </defs>
+  <g
+     id="g8"
+     transform="matrix(1.3333333,0,0,-1.3333333,0,595.2756)">
+    <g
+       id="g10">
+      <g
+         id="g12"
+         clip-path="url(#clipPath16)">
+        <path
+           d="M 0,446.456 H 793.672 V 0.028 H 0 Z"
+           style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:none"
+           id="path18" />
+        <path
+           d="M 0,446.456 H 793.701 V -0.001 H 0 Z"
+           style="fill:#00a6d6;fill-opacity:1;fill-rule:evenodd;stroke:none"
+           id="path20" />
+      </g>
+    </g>
+    <g
+       id="g22">
+      <g
+         id="g24"
+         clip-path="url(#clipPath28)">
+        <path
+           d="m 600.32101,36.752001 c 0.65831,-0.07073 1.36477,-0.212186 2.04716,-0.471801 5.20009,-1.863077 6.84712,-16.723586 5.9298,-35.1679577 l -0.25901,-3.9633016 h -39.36845 l 2.61167,4.7180181 c 11.2486,20.2608502 18.82543,33.6352252 27.01491,34.8376132 0.65831,0.09486 1.3407,0.118158 2.02392,0.04743 z M 412.44111,390.15819 c 2.37674,0.16475 4.28277,-1.08506 5.45993,-4.19879 3.17701,-8.25528 0.9414,-20.00124 -4.1184,-42.85741 C 381.96777,203.44199 257.8604,103.50405 235.26939,5.2161692 l -1.29422,-8.0672285 H -0.85 V 11.938721 L 21.340049,32.2703 C 142.71787,139.09638 298.35869,220.63738 370.03678,341.19148 c 12.35437,20.63863 32.05064,48.21199 42.40433,48.96671 z m 348.2966,56.32581 h 36.0744 V 155.41889 l -7.3419,1.34468 c -57.465,13.0199 -99.49244,56.9865 -99.30482,144.73082 0.0706,46.84402 24.04959,92.06044 62.38367,136.09777 z m -761.58771,0 h 134.27262 l -7.38838,-4.95267 C 87.770729,415.27851 49.296356,385.62906 12.633381,352.27758 L -0.85,339.54059 Z"
+           style="fill:#00b8c8;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:0.831128"
+           id="path30" />
+        <g
+           id="g32" />
+      </g>
+    </g>
+  </g>
+</svg>
